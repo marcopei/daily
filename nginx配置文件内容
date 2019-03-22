@@ -1,0 +1,171 @@
+主nginx配置文件
+]# cat  /usr/local/nginx/conf/nginx.conf
+#user sure sure;
+pid    /usr/local/nginx/conf/nginx.pid;
+error_log  /usr/local/nginx/logs/error.log crit;
+
+worker_processes 24;
+worker_rlimit_nofile 65535;
+
+events {
+    use epoll;
+    worker_connections 65535;
+}
+
+http {
+    include mime.types;
+    default_type application/octet-stream;
+
+    access_log off;
+    server_tokens off;
+    server_names_hash_bucket_size 128;
+    client_header_buffer_size 32k;
+    large_client_header_buffers 4 32k;
+
+    sendfile on;
+    tcp_nopush on;
+    keepalive_timeout 120;
+    tcp_nodelay on;
+    client_max_body_size   50M;
+    client_body_buffer_size 128k;
+
+    gzip on;
+    gzip_min_length 1k;
+    gzip_buffers 4 16k;
+    gzip_http_version 1.0;
+    gzip_comp_level 2;
+    gzip_types text/plain application/x-javascript text/css application/xml;
+    gzip_vary on;
+
+    add_header P3P "CP=CAO PSA OUR";
+
+    ssi on;
+    ssi_silent_errors on;
+    ssi_types text/shtml;
+    ssi_types text/action;
+
+    log_format main '$remote_addr - $remote_user [$time_local] "$request" '
+                    '$status $body_bytes_sent "$http_referer" '
+                    '"$http_user_agent" $http_x_forwarded_for';
+    log_format mlnormal '$remote_addr|$remote_user|[$time_local]|$host|"$request"|'
+                        '$status|$body_bytes_sent|"$http_referer"|'
+                        '"$http_user_agent"|$http_x_forwarded_for|'
+                        '$upstream_addr|$upstream_status|$upstream_response_time|'
+                        '$server_addr';
+    include vhost/*.conf;
+}
+
+转发vhost的各配置文件
+]# cat  /usr/local/nginx/conf/vhost/api.conf
+upstream api {
+    ip_hash;
+    server 172.16.16.8:14083 max_fails=2 fail_timeout=30s;
+    server 172.16.16.8:14083 max_fails=2 fail_timeout=30s;
+}
+
+server {
+    listen 80;
+    #listen 443 ssl;
+    server_name    outtest.api.suresvip.com;
+    index  index.htm index.html index.jsp;
+    root   /data/web/api1;
+
+    #ssl_certificate /data/ssl/shenqi.cer;
+    #ssl_certificate_key /data/ssl/shenqi.key;
+    #ssl_session_timeout 5m;
+
+    access_log /usr/local/nginx_logs/login.access.log mlnormal;
+
+    location ~ ^/WEB-INF/* {
+        deny all;
+    }
+
+    location ~ .(svn|git|cvs) {
+        deny all;
+    }
+
+    location ~.* {
+        proxy_pass        http://api;
+        proxy_next_upstream http_500 http_502 http_503 http_504 error timeout invalid_header;
+        proxy_redirect    off;
+        proxy_set_header  Host $host;
+        proxy_set_header  X-Forwarded-For  $proxy_add_x_forwarded_for;
+        proxy_set_header  X-Real-IP  $remote_addr;
+        #include /usr/local/nginx/conf/proxy.conf;
+    }
+
+    location ~* \.(gif|jpg|jpeg|png|bmp|swf|js|css)$ {
+        expires 30d;
+    }
+}
+
+
+]# cat /usr/local/nginx/conf/vhost/guild.conf
+#upstream guild-front {
+#    ip_hash;
+#    server 172.16.16.8:8004 max_fails=2 fail_timeout=30s;
+#    server 172.16.16.8:8004 max_fails=2 fail_timeout=30s;
+#}
+
+server {
+    listen 80;
+    #listen 443 ssl;
+    server_name    outtest.guild.suresvip.com;
+    index  index.htm index.html index.jsp;
+    root   /data/web/guild-front;
+
+    #ssl_certificate /data/ssl/shenqi.cer;
+    #ssl_certificate_key /data/ssl/shenqi.key;
+    #ssl_session_timeout 5m;
+
+    access_log /usr/local/nginx_logs/login.access.log mlnormal;
+
+        location / {
+                try_files $uri $uri/ @router;
+                index index.html;
+        }
+        location @router {
+                rewrite ^.*$ /index.html last;
+        }
+
+       location ~ \.(do)$ {
+                proxy_pass http://172.16.16.8:8003;
+        }
+    location ~ .(svn|git|cvs) {
+        deny all;
+    }
+
+#    location ~.* {
+#        proxy_pass        http://guild-front;
+#        proxy_next_upstream http_500 http_502 http_503 http_504 error timeout invalid_header;
+#        proxy_redirect    off;
+#        proxy_set_header  Host $host;
+#        proxy_set_header  X-Forwarded-For  $proxy_add_x_forwarded_for;
+#        proxy_set_header  X-Real-IP  $remote_addr;
+#        #include /usr/local/nginx/conf/proxy.conf;
+#    }
+
+    location ~* \.(gif|jpg|jpeg|png|bmp|swf|js|css)$ {
+        expires 30d;
+    }
+}
+
+
+
+
+https加密配置：
+server {  
+        listen 443;        
+        server_name www.domain.com; #填写绑定证书的域名
+        ssl off;        
+        ssl_certificate 1_www.domain.com_bundle.crt;        
+        ssl_certificate_key 2_www.domain.com.key;        
+        ssl_session_timeout 5m;        
+        ssl_protocols TLSv1 TLSv1.1 TLSv1.2; #按照这个协议配置
+        ssl_ciphers ECDHE-RSA-AES128-GCM-SHA256:HIGH:!aNULL:!MD5:!RC4:!DHE;#按照这个套件配置
+        ssl_prefer_server_ciphers on;        
+location / {            
+            root   html; #站点目录
+            index  index.html index.htm;
+        }
+    }

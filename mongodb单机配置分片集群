@@ -1,0 +1,225 @@
+mongdb.3.2分片安装步骤
+
+1.解压mongodb-linux-x86_64-rhel70-3.2.0安装包：
+tar   -xf   mongodb-linux-x86_64-rhel70-3.2.0.tar.gz
+
+2.拷贝解压后的mongo到相对应目录下
+mv   mongodb-linux-x86_64-rhel70-3.2.0   /data/soft/mongodb
+
+3.创建相对应目录文件
+mkdir   {config,mongos,shard1,shard2,configdata}
+mkdir   {mongos/data,mongos/logs,shard1/data,shard1/logs,shard2/data,shard2/logs}
+
+4.配置对应的配置文件:(可以拷贝svn里面的对应的配置文件)
+]# vim  config/configServer.conf
+#!/bin/bash
+systemLog:
+   destination: file
+   path: "/data/app/mongodb/logs/configServer.log"                                #日志存储位置
+   logAppend: true
+storage:
+   journal:                                                                #journal配置
+      enabled: true
+   dbPath: "/data/app/mongodb/configdata"                                              #数据文件存储位置
+   directoryPerDB: true                                                    #是否一个库一个文件夹
+   engine: wiredTiger                                                      #数据引擎
+   wiredTiger:                                                             #WT引擎配置
+      engineConfig:
+         cacheSizeGB: 6                                                    #设置为6G,默认为物理内存的一半
+         directoryForIndexes: true                                         #是否将索引也按数据库名单独存储
+         journalCompressor: zlib
+      collectionConfig:                                                    #表压缩配置
+         blockCompressor: zlib
+      indexConfig:                                                         #索引配置
+         prefixCompression: true
+net:                                                                       #端口配置
+   port: 30001                                                             #另外两台需要分别修改为30002、30003
+processManagement:                                                         #配置启动管理方式
+   fork: true
+sharding:                                                                  #分片配置
+   clusterRole: configsvr 
+   
+   
+]# vim  mongos/mongos.conf
+#!/bin/bash
+systemLog:
+    destination: file
+    path: "/data/app/mongodb/logs/mongos_50001.log"
+    logAppend: true
+net:
+    port: 50001
+sharding:
+    configDB: 10.135.182.179:30001
+processManagement:
+    fork: true
+    
+ 
+
+]# vim   shard1/shard.conf
+dbpath=/data/app/mongodb/sharddata/40001
+logpath=/data/app/mongodb/logs/shard_40001.log
+port=40001
+fork=true
+
+
+]# vim  shard2/shard.conf
+dbpath=/data/app/mongodb/sharddata/40002
+logpath=/data/app/mongodb/logs/shard_40002.log
+port=40002
+fork=true
+
+
+5.配置软连接和命令路径
+]# ln  -s   软件安装的路径     软连接路径
+]# export PATH=$JAVA_HOME/bin:$PATH:/data/soft/mongodb/bin
+]# source  /etc/profile
+
+
+6.查看mongodb版本信息
+]# mongo  --version
+
+
+7.启动mongo服务
+]# mongod -f config/configServer.conf 
+]# mongos -f mongos/mongos.conf 
+]# mongod -f shard1/shard1.conf 
+]# mongod -f shard2/shard2.conf 
+
+
+
+8.设置分片
+]# mongo   --port   mongos的端口号
+mongos> use admin
+mongos> db.runCommand({addshard:"192.168.0.9:40001"})
+mongos> db.runCommand({addshard:"192.168.0.9:40002"})
+mongos> db.runCommand( { listshards : 1 } );
+mongos> db.runCommand({"enablesharding":"app_test"})
+mongos> db.runCommand({"shardcollection":"app_test.user001","key":{"_id":1}})
+mongos> use app_test
+mongos> for (var i=1;i<=100000;i++) db.user001.save({"name":"ljai","age":27,"addr":"fuzhou"})
+mongos> use config
+mongos> db.databases.find()
+
+
+
+9.初始化环境：
+]# mongo  --port  40001(任意分片的端口号)
+运行svn里面的mongodb.sql里面的命令
+
+
+
+额外主从模式配置
+########主从模式
+./bin/mongod -f config/configServer.conf
+./bin/mongos -f mongos/mongos.conf
+./bin/mongod -f shard1/master.conf
+./bin/mongod -f shard1/slave.conf
+./bin/mongod -f shard1/arbitration.conf
+./bin/mongod -f shard2/master.conf
+./bin/mongod -f shard2/slave.conf
+./bin/mongod -f shard2/arbitration.conf
+
+master上设置(主从仲裁)
+./bin/mongo --port=40001
+use admin
+config = { _id:"shard1", members:[
+                 {_id:0,host:"192.168.0.7:40001"},
+                 {_id:1,host:"192.168.0.7:40011"},
+                 {_id:2,host:"192.168.0.7:40021",arbiterOnly:true}]
+        }
+        
+rs.initiate(config);
+
+./bin/mongo --port=40002
+use admin
+config = { _id:"shard2", members:[
+                 {_id:0,host:"192.168.0.7:40002"},
+                 {_id:1,host:"192.168.0.7:40012"},
+                 {_id:2,host:"192.168.0.7:40022",arbiterOnly:true}]
+        }
+        
+rs.initiate(config);
+
+mongos设置集中分片
+./bin/mongo --port 50001
+mongos> use admin
+mongos> db.runCommand({addshard:"shard1/192.168.0.7:40001,192.168.0.7:40011,192.168.0.7:40012"});
+mongos> db.runCommand({addshard:"shard2/192.168.0.7:40002,192.168.0.7:40012,192.168.0.7:40022"});
+mongos> db.runCommand( { listshards : 1 } );
+mongos> db.runCommand({"enablesharding":"app_test"})
+mongos> db.runCommand({"shardcollection":"app_test.user001","key":{"_id":1}})			---每次加表都需要执行这句,否则无法分片
+mongos> use app_test
+mongos> for (var i=1;i<=100000;i++) db.user001.save({"name":"ljai","age":27,"addr":"fuzhou"})
+
+对于slave(40012)操作，先执行rs.slaveOk()，然后可进行读，不能写
+./bin/mongo --port=40011
+shard1:SECONDARY> rs.slaveOk()
+shard1:SECONDARY> use app_test
+shard1:SECONDARY> db.user001.count()
+
+http://www.cnblogs.com/stephen-liu74/archive/2012/08/01/2561557.html
+db.runCommand({"enablesharding":"app_test"})
+-----每加一张表要记得加索引和设置分片生效,注意先设索引再设分片
+use app_test
+db.UserInfo.ensureIndex({"userId":1},{"unique":true},{background: 1})
+db.UserInfo.ensureIndex({"userName":1},{"unique":true},{background: 1})
+db.UserInfo.ensureIndex({"nickName":1},{background: 1})
+db.UserData.ensureIndex({"userId":1},{background: 1})
+db.Union.ensureIndex({"unionId":1},{"unique":true},{background: 1})
+db.Union.ensureIndex({"unionName":1},{background: 1})
+db.UnionMember.ensureIndex({"unionId":1},{background: 1})
+db.UnionMember.ensureIndex({"memberId":1},{background: 1})
+db.Room.ensureIndex({"roomId":1},{"unique":true},{background: 1})
+db.Room.ensureIndex({"unionId":1},{background: 1})
+db.Room.ensureIndex({"mainType":1},{background: 1})
+db.Room.ensureIndex({"roomName":1},{background: 1})
+use admin
+db.runCommand({"shardcollection":"app_test.UserInfo","key":{"userId":1}})
+db.runCommand({"shardcollection":"app_test.UserData","key":{"userId":1}})
+db.runCommand({"shardcollection":"app_test.Union","key":{"unionId":1}})
+db.runCommand({"shardcollection":"app_test.UnionMember","key":{"unionId":1}})
+db.runCommand({"shardcollection":"app_test.Room","key":{"roomId":1}})
+
+db.UserBind.find().explain()
+查看分片情况()
+use config
+db.chunks.find()
+ > sh.status(); #查看片的状态
+ > printShardingStatus(db.getSisterDB("config"),1); # 查看片状态(完整版);
+ > db.stats(); # 查看所有的分片服务器状态
+
+db.posts.ensureIndex({user_id: 1}, {background: 1})
+
+
+手动预先分片
+以shop.user表为例
+
+sh.shardCollection(‘shop.user’,{userid:1}); # user表用userid做shard key
+
+for(var i=1;i<=40;i++) { sh.splitAt('shop.user',{userid:i*1000}) } # 预先在1K 2K...40K这样的界限切好chunk(虽然chunk是空的), 这些chunk将会均匀移动到各片上.
+
+
+1.use admin ;db.runCommand({"enablesharding":"app_test"});
+2.use app_test;db.runCommand({"shardcollection":"app_test.UserBase","key":{"userId":1}})
+3.use admin;db.UserBase.ensureIndex({"phoneNumber":1},{background: 1});db.UserBase.ensureIndex({"nickName":1},{background: 1})
+
+db.UserBase.getIndexes()
+db.UserBase.stats();
+
+
+
+db.getCollectionNames().forEach(function(x){
+     if(x != 'system.indexes' && x != 'system.users'){
+          print(x + ":" + db.getCollection(x).count());
+     }
+});
+
+
+查看当前MongoDB的连接数
+mongo中每一个连接都是一个线程，需要一个stack，从结果中可看到当前连接数为2372，最大连接数为51200
+bj1-farm1:PRIMARY> db.serverStatus().connections
+{
+"current" : 2372,
+"available" : 48828,
+"totalCreated" : NumberLong(185449264)
+}

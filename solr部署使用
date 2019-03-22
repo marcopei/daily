@@ -1,0 +1,57 @@
+solr清除数据步骤：
+1.登录solr网页
+
+2.搜索对应的core，
+
+3.点击Documents --> Document Type --> 选择XML类型 
+
+4.定格编写语句：
+<delete><query>*:*</query></delete>
+<commit/>
+
+5.最后点击Submit  Document
+
+
+
+安装solr-5.5.5步骤
+1.安装jdk1.7依赖包
+]# tar  -xvf  jdk-7u80-linux-x64.tar.gz
+]# mv   jdk1.7.0_80    /data/jdk1.7
+]# vim  /etc/profile
+   export JAVA_HOME=/data/jdk1.7
+   export JRE_HOME=/data/jdk1.7/jre
+   export CLASSPATH=.:$JAVA_HOME/lib/dt.jar:$JAVA_HOME/lib/tools.jar:$JRE_HOME/lib:$CLASSPATH
+   export PATH=$JAVA_HOME/bin:$PATH
+]# source  /etc/profile
+   
+查看jdk是否安装成功
+]# java  -version
+出现以下内容表示安装成功
+   java version "1.7.0_80" 
+   Java(TM) SE Runtime Environment (build 1.7.0_80-b15)
+   Java HotSpot(TM) 64-Bit Server VM (build 24.80-b11, mixed mode)
+
+
+解压tar包
+]# tar -xvf  solr-5.5.5.gz
+]# mv   solr-5.5.5    /data/solr-5.5
+
+
+修改solr默认端口
+]# vim   /data/solr-5.5/bin/solr.in.sh
+]# vim   /data/solr-5.5/server/etc/jetty-https.xml
+]# vim   /data/solr-5.5/server/etc/jetty-https-ssl.xml
+]# vim   /data/solr-5.5/server/etc/jetty-http.xml
+
+启动solr服务
+]# /data/solr-5.5/bin/solr  start
+
+
+查看端口
+]# netstat  -auntlp  | grep 14983
+
+
+创建新core
+命令方式：./bin/solr  create  -c  sure-core    （需要重启solr服务才行）
+
+手动创建：可以参照网址https://www.cnblogs.com/zjm-1/p/9172799.html

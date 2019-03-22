@@ -1,0 +1,49 @@
+#外测除webcs，发版脚本
+#！/bin/bash
+read  -p   "请输入你要发版的服务":  web
+/data/tomcat/$web/bin/catalina.sh  stop
+if [ $?  -ne  0 ];then
+    echo  '$web关闭出错'
+    exit
+else
+    echo  '$web已关闭'
+fi
+    
+cd    /data/web/$web/
+svn   update
+
+uid=`ps  -aux  |  grep   $web  |  grep  -v  grep  | awk  'NR==1{print  $2}'`
+kill  -9  $uid
+
+/data/tomcat/$web/bin/catalina.sh  start
+if  [ $?  -ne  0 ];then
+   echo  '$web出错，请查看日志'
+   exit
+else
+   echo  '$web已重启，发版成功'
+fi
+
+
+#外测webcs发版脚本
+#!/bin/bash
+/data/soft/tomcat/webcs/bin/catalina.sh   stop
+if  [ $?  -ne  0 ];then
+    echo  'webcs关闭错误'
+    exit
+else
+    echo  'webcs已关闭'
+fi
+
+cd  /data/web/webcs
+svn  update
+
+uid=`ps  -aux  |  grep   $web  |  grep  -v  grep  | awk  'NR==1{print  $2}'`
+kill  -9  $uid
+
+/data/soft/tomcat/webcs/bin/catalina.sh   start
+if  [ $?  -ne  0 ];then
+    echo  'webcs错误，请查看日志'
+    exit
+else
+    echo  'webcs已重启发版'
+fi

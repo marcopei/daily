@@ -1,0 +1,102 @@
+先停所有服务
+
+
+规划目录————安装服务应用————检查服务应用————部署服务应用————发布应用
+
+流程：
+1.服务器优化,参数配置，基础配置
+2.规划端口分配,目录分配
+3.安装相关软件，端口安全策略，启动完后检查各服务器之间是否可以访问
+4.部署应用，修改相关配置，启动检查日志是否正常启动
+
+
+29/01
+目前，外测时遇到的问题：
+1.目录的规范化；
+2.端口的映射问题；
+3.将用VPN访问改成改成使用jumpserver堡垒机；
+4.没有实现自动化编译，全手动操作编译；
+5.注意备份需要经常修改的配置文件；
+
+
+
+
+报错问题：‘-bash: /usr/bin/yum: /usr/bin/python: bad interpreter: No such file or directory’
+解决办法：
+$ rpm -qa | grep python- | grep 2.6
+$  sudo rpm -ivh --force --nodeps ftp://mirror.switch.ch/pool/4/mirror/scientificlinux/6.5/x86_64/updates/fastbugs/python-2.6.6-52.el6.x86_64.rpm
+解决问题，yum可以使用，原理估计是python回滚到默认的2.6。
+
+
+
+常见问题报错：如果syserr.log日志文件里面出现
+2019-02-20 17:44:27 001 -       at com.surelive.app.server.thread.GenRobotThread.run(GenRobotThread.java:58)
+2019-02-20 17:44:27 001 - java.lang.IllegalArgumentException: Illegal character(s) in message header field: Pragma:
+2019-02-20 17:44:27 001 -       at sun.net.www.protocol.http.HttpURLConnection.checkMessageHeader(HttpURLConnection.java:511)
+2019-02-20 17:44:27 001 -       at sun.net.www.protocol.http.HttpURLConnection.isExternalMessageHeaderAllowed(HttpURLConnection.java:481)
+2019-02-20 17:44:27 001 -       at sun.net.www.protocol.http.HttpURLConnection.setRequestProperty(HttpURLConnection.java:2895)
+2019-02-20 17:44:27 001 -       at sun.net.www.protocol.https.HttpsURLConnectionImpl.setRequestProperty(HttpsURLConnectionImpl.java:325)
+2019-02-20 17:44:27 001 -       at mmo.common.utils.HttpUtils.sendPost(HttpUtils.java:28)
+2019-02-20 17:44:27 001 -       at com.surelive.app.server.service.QQGroupApiService.createUser(QQGroupApiService.java:258)
+2019-02-20 17:44:27 001 -       at com.surelive.app.server.thread.GenRobotThread.run(GenRobotThread.java:58)
+2019-02-20 17:44:27 001 - java.lang.IllegalArgumentException: Illegal character(s) in message header field: Pragma:
+2019-02-20 17:44:27 001 -       at sun.net.www.protocol.http.HttpURLConnection.checkMessageHeader(HttpURLConnection.java:511)
+是因为jdk的路径不对，运行env命令查看是否配置了PATH，没有的话需要配置生效
+shell]# vim /etc/profile  #添加以下内容
+export JAVA_HOME=/usr/local/jdk1.7
+export PATH=$JAVA_HOME/bin:$PATH
+export CLASSPATH=.:$JAVA_HOME/lib/dt.jar:$JAVA_HOME/lib/tools.jar
+export LD_LIBRARY_PATH=$JAVA_HOME/lib
+
+
+
+
+2019-3-7 mysql单机多实例上遇到的问题：
+ [ERROR] InnoDB: Unable to lock ./ibdata1 error: 11
+ [Note] InnoDB: Check that you do not already have another mysqld process using the same InnoDB data or log files.
+ [ERROR] InnoDB: Operating system error number 11 in a file operation.
+ [ERROR] InnoDB: Error number 11 means 'Resource temporarily unavailable'
+ [Note] InnoDB: Some operating system error numbers are described at http://dev.mysql.com/doc/refman/5.7/en/operating-system-error-codes.html
+ [ERROR] InnoDB: Cannot open datafile './ibdata1'
+ [ERROR] InnoDB: Could not open or create the system tablespace. If you tried to add new data files to the system tablespace, and it failed here, you should now edit innodb_data_file_path in my.cnf back to what it was, and remove the new ibdata files InnoDB created in this failed attempt. InnoDB only wrote those files full of zeros, but did not yet use them in any way. But be careful: do not remove old data files which contain your precious data!
+ [ERROR] InnoDB: Plugin initialization aborted with error Cannot open a file
+ [ERROR] Plugin 'InnoDB' init function returned error.
+ [ERROR] Plugin 'InnoDB' registration as a STORAGE ENGINE failed.
+ [ERROR] Failed to initialize plugins.
+ [ERROR] Aborting
+出现以上的报错的原因：
+1.已有相同的进程占用了资源
+2.ibdata1文件发生了冲突或者是没能大概对应的ibdata1文件
+
+解决方法：
+1.用ps -aux | grep "进程名"查看是否有已开启的进程；
+2.用kill  -9  杀死所有的对应的进程；
+3.删除多余的ibdata1文件，或者将其移走、重命名；之后再拷贝一份新的回来
+4.重启服务
+
+单机多实例部署mysql，因为其启动是需要指定对应的配置文件，所以重启的时候需要先采用kill杀死进程，然后再一次启动。如果不是这样操作
+就会报错，并且之前的进程也无法关闭。（或者可以通过修改脚本来实现启动、关闭、重启，但是具体的修改有待研究）
+
+
+梁轩github地址：https://blog.iexxk.com/categories/
+
+
+2019-03-20 mysql数据库主从同步报错：
+Slave_IO_Running: Yes
+Slave_SQL_Running: No
+Last_SQL_Errno: 1677
+Last_SQL_Error: Column 9 of table 'surelive.LG_Login' cannot be converted from type 'tinyblob' to type 'varchar(60(bytes) utf8)
+
+解决方法：
+1.网上各路大神都说，是因为slave库上具有和master库上相同的表名，但是但字段多少、字段类型、字段顺序不一样，所以导致报错1677；这时只需要设置
+slave_type_conversions参数就好。需先停止stop  slave后设置再开启slave。
+参数支持值：
+1）ALL_LOSSY:可以将int型转化成tinyint,存在截断的情况，有损转化
+2）ALL_NON_LOSSY：不允许出现截断情况，slave的类型范围大于master方可转化。设置这个参数后，如果存在截断情况，slave会报错
+3）以后两个参数都设置，就存在截断的情况
+4）未设置，主备之间必须一致
+
+2.个人解决办法：第一次我按照网上大神所说的去设置参数，但时还说报错，刚开始以为是因为临时设置所以没生效的原因，之后又再修改配置文件，发现还是
+同样报错1677，这时我就觉得应该不是这个参数的原因。后来我想想，因为当时数据库master一直还在运行的，并且在修改master上的部分表格时，slave库已经
+断开了主从连接，没有同步到master上的操作；所以为了验证我的个人想法，我马上备份mysqldump  master上的数据，然后在slave上进行恢复，完成后再change
+ master，最后我再查看slave的状态，发现已经不报错了，并且主从也稳定的运行。
