@@ -1,0 +1,4017 @@
+day03 知识点大纲
+一 MySQL存储引擎
+1.1  存储引擎?
+
+mysql> show engines; 查看数据库服务当前使用的存储引擎
+
+
+
+设置数据库服务默认使用的存储引擎？
+]# vim  /etc/my.cnf
+[mysqld]
+default-storage-engine="myisam"
+:wq
+]# systemctl  restart mysqld;
+
+
+查看表使用的存储引擎
+mysql> show create table 表名；
+mysql> show  table status like "user"\G;
+
+
+创建表时指定表使用的存储引擎？
+mysql> create  table t3(age int )engine=memory;
+
+修改表使用的存储引擎？
+mysql> alter table  t3 engine=innodb;
+
+
+存储引擎的特点？
+MYISAM特点: 支持表级锁
+不支持事务、事务回滚、外键
+
+表名.frm   desc 表名;
+表名.MYI   show index from  表名;
+表名.MYD   select  * from  表名;
+
+
+INNODB特点: 支持行级锁定
+支持事务、事务回滚、外键
+
+
+ib_logfile0 
+ib_logfile1
+ibdata1
+
+表名.frm  desc 表名;
+表名.ibd  select  * from  表名; + show index from  表名;
+
+事务特性:ACID
+
+
+建表时如何决定表使用那种存储引擎？
+ update delete  insert  ---> innodb 
+ select -------------------> myisam
+10m    10:15
+
++++++++++++++++++++++++++++++
+二数据导入导出
+
+2.1数据导入导出搜索路径 /var/lib/mysql-files/
+
+修改搜索路径  10分钟到 09：38
+]# vim /etc/my.cnf
+[mysqld]
+secure_file_priv="/mydir"
+:wq
+]# mkdir /mydir
+]# chmod o+w /mydir
+]# systemctl  restart  mysqld
+]# mysql  -uroot  -p123qqq...A
+mysql> show  variables like  "secure_file_priv";
+
+2.2  数据导入
+2.2.1 什么是数据导入：把系统文件的内容存储到数据库的表里
+2.2.2 命令用法：
+mysql>  load data infile "目录名/文件名" into  table 
+表名
+FIELDS TERMINATED BY   "分隔符"
+LINES TERMINATED BY   "\n";
+
+2.2.3 例子
+mysql> create database  userdb;
+Query OK, 1 row affected (0.00 sec)
+
+mysql> use userdb;
+Database changed
+mysql> create  table user(
+    -> name char(30),
+    -> password char(1),
+    -> uid  int,
+    -> gid  int,
+    -> comment  char(150),
+    -> homedir  char(150),
+    -> shell char(50),
+    -> index(name)
+    -> );
+Query OK, 0 rows affected (1.12 sec)
+mysql> system cp /etc/passwd  /mydir/
+mysql> system ls /mydir/
+passwd
+
+mysql> load data infile  "/mydir/passwd"
+    -> into  table user
+    -> fields terminated by ":"
+    -> lines  terminated by "\n";
+
+mysql> select  *  from  user;
+
+mysql> mysql> alter table  user
+    -> add
+    -> id int  primary key  auto_increment first;
+
+mysql> select  *  from  user;
+mysql> select  *  from  user where  id=3;
+
+休息10分钟到  10：26 
+
+2.3  数据导出
+2.3.1 什么是数据导出： 把表记录存放的系统文件里
+2.3.2 命令用法：
+
+SQL查询   into   outfile   "目录名/文件名"；
+
+SQL查询   into   outfile   "目录名/文件名  fields  terminated   by   "分隔符"；
+
+SQL查询   into   outfile   "目录名/文件名  lines  terminated   by   "分隔符" ；
+
+ 
+2.3.3 例子  练习10 分钟到  10：59 
+select  * from user where id<=2  into outfile "/mydir/user.txt";
+
+select  * from user where id<=2  into outfile "/mydir/user2.txt" fields terminated by  "###";
+
+select  * from user where uid<100 limit 10 into outfile  "/mydir/user2.txt";
+
+mysql> system cat /mydir/user2.txt
+
+三 管理表记录
+3.1 增加表记录
+
+insert into  user 
+values (42,"bob","x",3000,3000,"studen","/home/bob","/bin/bash");
+
+insert into  user 
+values
+(43,"tom","x",3000,3000,"studen","/home/bob","/bin/bash"),
+(44,"lili","x",3000,3000,"studen","/home/bob","/bin/bash"),
+(45,"lucy","x",3000,3000,"studen","/home/bob","/bin/bash");
+
+mysql> insert into  user(name,uid)
+values
+("jerry",4001);
+
+mysql> insert into  user(name,uid)
+values
+("jerry",4001),
+("jack",4009),
+("mack",5001);
+
+3.2 查询表记录
+
+mysql> select name,uid,gid from user;
+mysql> select * from user;
+
+mysql> select * from user where id = 1;
+mysql> select id,name from user where id = 1;
+mysql> select id,name,uid from user where id = 1;
+
+3.3 更新表记录
+mysql> update user 
+    -> set
+    -> password="A",comment="student";
+
+select  * from  user;
+
+mysql> update user set password="x",comment="root" 
+    -> where id=1;
+
+select  * from  user where  id=1;
+
+3.4 删除表记录
+mysql> delete from  user where id=1;
+mysql> delete from  user;
+
+四 匹配条件 (SELECT   DELETE  UPDATE)
+
+4.1 数值比较 =  !=  >  >=  <  <=
+
+select * from  user  where uid  = 100;
+
+select * from  user  where id  < 10;
+
+select name,uid,gid from  user  where 1  = 1  ;
+
+select name,uid,gid from  user  where uid = gid;
+
+select  name,uid,gid from user  where uid != gid;
+
+2 字符比较  =   !=
+
+ select name,shell from user where  shell = "/bin/bash";
+
+ select name,shell from user where  shell != "/bin/bash";
+
+ select name  from user where  name = "adm";
+
+3 匹配空 is  null
+select  name from user where shell  is null;
+insert into  user (name)values(null)
+select  * from  user where name is null;
+
+4  非空  is  not null
+select  name from user where shell  is not  null;
+
+
+5 逻辑匹配
+逻辑或 or
+select name,uid,gid from  user  
+where name="root"  or uid=3  or  gid=1;
+
+逻辑与 and
+
+select name,uid,gid from  user 
+where  name="root" and  uid=3  and  gid=1;
+
+select name,uid,gid from  user 
+where  name="root" and  uid=0  and  gid=0;
+逻辑非 ！ 和 not
+select name from user where name = "root";
+select name from user where name != "root";
+select name from user where name is null;
+select name from user where name is not  null;
+
+范围内匹配
+在…里…    in  (值列表) 
+select name from user 
+where  name in ("adm","bob","lucy","lili");
+
+select name,uid  from user 
+where  uid in (10,20,30,7); 
+
+不在…里…    not  in  (值列表)
+select name,shell from user
+where  shell not in ("/bin/bash","/sbin/nologin");
+
+在…之间…  between 数字1 and 数字2
+
+select  * from  user where id between 5 and  15;
+select  * from  user where uid between 10 and  20;
+
+休息到 15：20
+去重显示  distinct
+select  gid from user;
+select  distinct  gid from user;
+select  shell from user;
+select  distinct  shell from user;
+select  distinct  shell from user where id>=10;
+
+高级匹配条件
+1 模糊查询  like   _  %  普通字符
+
+select name from user where name  like '____';
+select name from user where name  like '___';
+
+select name from user where name  like 'a%';
+select name from user where name  like '%a%';
+
+select name from user where name  like '__%_';
+
+select name from user where name  like '%_%';
+
+2 正则表达式  . ^  $  [] *  |
+
+select name from  user where  name   regexp  '^a|^r';
+
+insert into user(name)values("yaya9"),("ya6ya"),("7yaya");
+
+select name from  user where  name   regexp '[0-9]';
+
+select name from  user where  name   regexp '^[0-9]';
+
+select name from  user where  name   regexp '^j.*y$';
+select name from  user where  name   regexp '^r.*t$';
+ 
+3 四则运算 +  - *  /  %
+
+select name,uid,  uid - 1  from user where id <= 3 ;
+
+update  user set uid=uid+1  where id <= 3;
+select  name,uid from user where id <= 3;
+
+select name,uid,gid, uid + gid  sum from user 
+where id <= 3;
+
+提高优先级 ()
+select name,uid,gid, (uid + gid)/2  pjz from user 
+where id <= 3;
+
+休息到  16：20
+
+操作查询结果
+1 聚集函数
+select  avg(uid) from  user;
+select  avg(uid) from  user where uid <=10;
+
+select  sum(uid) from  user;
+select  sum(uid) from  user where shell != "/bin/bash";
+
+select  min(uid) from  user;
+select  min(uid) from  user where uid>1000;
+
+select  max(uid) from  user;
+select  max(uid) from  user where name regexp '^a';
+
+select  count(name) from  user;
+select  count(name) from  user where shell="/bin/bash";
+
+查询结果排序 order by 
+select name,uid from user 
+where uid >=10  and uid <=500   order by uid desc;
+
+select name,uid from user 
+where uid >=10  and uid <=500   order by uid;
+或
+select name,uid from user
+where uid >=10  and uid <=500   order by uid asc;
+
+查询结果分组 group by  
+select  shell  from  user;
+
+select  shell  from  user group by shell;
+
+mysql> select  shell  from  user where name regexp "a"
+    -> group by shell;
+
+select  distinct shell  from  user where name regexp "a";
+
+查询结果过滤  having 条件；
+
+select name from  user where shell!="/bin/bash" 
+having name="adm";
+
+
+select name from  user 
+where shell!="/bin/bash" and  name="adm";
+
+
+限制查询结果显示行数 limit
+ select  * from user ;
+ select  * from user limit 3;
+
+ select  * from user limit 0,2;
+ select  * from user limit 1,2;
+
+
+userdb库user表中uid小于100的前10条记录
+select  *  from userdb.user where uid<100  limit 10;
+
+++++++++++++++++++++++++++++++++11:25
+DBA1_day04
+一 、多表查询 **
+
+1 .1 复制表 （功能： 備份表 和  快速建表)
+備份表
+mysql> create table db4.user2  select  * from userdb.user;
+mysql> create table db4.user3 
+select * from userdb.user order by uid desc limit 5;
+快速建表
+mysql> create  table db4.user4  
+select  * from userdb.user where  1  > 2; 
+1.2 多表查詢
+方法1
+
+use  db4;
+
+mysql> create table  t1 
+    -> select name,uid,shell from userdb.user limit 3;
+
+mysql> create table  t2 
+    -> select name,uid,homedir,password from userdb.user limit 6;
+
+
+select  *  from  t1;
+select  *  from  t2;
+
+方法1
+mysql> select  *  from   t1,t2;
+
+mysql> select  t1.name , t1.uid , t2.*  from t1,t2;
+
+mysql> select  t1.name  , t2.* from t1,t2;
+
+mysql> select  t1.name , t2.name  from t1,t2;
+
+
+mysql> select  * from  t1,t2  where t1.name="root" and t1.name=t2.name;
+
+mysql> select  * from  t1,t2  
+where t1.name="root" and t1.uid=1 and t1.name=t2.name;
+
+mysql> select  t1.* , t2.homedir,t2.password from  t1,t2  
+where t1.name="root" and t1.uid=1  and t1.name=t2.name;
+
+
+方法2 where子查询
+
+mysql> select name,uid from userdb.user 
+where uid > (select  avg(uid) from userdb.user);
+
+mysql> select name from userdb.user where name in 
+    -> (select user from mysql.user where host="localhost" and user="root");
+
+15:15
+
+方法3 左连接查询  left  join ... on ....
+方法4 右连接查询  right join ... on ....
+
+
+mysql> create table t3  select name,uid,shell,password from userdb.user 
+    -> limit 6 ;
+
+mysql> create table t4  select name,uid,shell,password from userdb.user 
+    -> limit 8;
+
+
+select  * from t3  left join t4 on t3.name=t4.name and t3.uid=t4.uid;
+
+select  * from t3  right join t4 on  t3.name=t4.name and t3.uid=t4.uid;
+
+10m    15:53 
+二、MySQL管理工具*
+2.1 部署運行環境
+2.2 安裝phpmyadmin軟件
+2.3 修改軟件的配置文件
+2.4 訪問phpmyadmin 管理數據庫
+
+10m  17:10  
+
+
+
+三、用户授权及撤销   ***
+
+设置管理员密码
+~]# mysqladmin  -hlocalhost -uroot -p password "A...qqq123"
+Enter password: 
+
+恢复MySQL管理密码
+
+
+
+3.1 授權庫mysql
+
+3.2 用戶授權
+在50主机授权
+                                  
+mysql> grant all on *.*  to root@"192.168.4.51" identified by "123qqq...A"
+    -> with grant option;
+
+mysql> select  * from mysql.user where user="root" and host="192.168.4.51"\G;
+
+mysql> show grants for root@"192.168.4.51";
+
+
+在51主机使用授权用户连接50服务器
+[root@mysql51 ~]# mysql -h192.168.4.50 -uroot -p123qqq...A
+mysql> select @@hostname; 查看主机名
+mysql> select  user(); 查看连接用户名及客户端地址
+mysql> show grants; 显示访问权限
+
+mysql> grant all on  testdb.*  to admin@"%" identified by "123qqq...A";
+
+50]#
+mysql> select user ,host  from mysql.user;
+mysql> show grants  for   admin@"%";
+
+
+在网络中的任意主机使用admin用户连接50数据库服务器
+[root@mysql52 ~]# mysql  -h192.168.4.50 -uadmin -p123qqq...A
+mysql> show  grants;
+mysql> show  databases;
+mysql> create  database  testdb;
+mysql> create table  testdb.a(id int);
+mysql> insert into  testdb.a values(101);
+mysql> select  * from  testdb.a;
+
+
+
+50]# 
+mysql> grant select , insert , update(name,uid) on userdb.user
+    -> to  yaya@"192.168.4.%"  identified by "123qqq...A"
+    -> with grant option;
+
+mysql> grant insert on  mysql.* to yaya@"192.168.4.%";
+
+
+在192.168.4.0/24的任意主机使用yaya用户连接50数据库服务器
+[root@mysql51 ~]# mysql -h192.168.4.50 -uyaya -p123qqq...A
+mysql> show grants;
+mysql> use userdb;
+mysql> show tables;
+mysql> delete from user;
+mysql> insert into  user(name)values("dachui");
+mysql> select name from user where name="dachui";
+mysql> update user set gid=100 where name="root";
+
+mysql> grant select , insert , update(name,uid) on userdb.user 
+to yaya2@"192.168.4.%"  identified by "123qqq...A";
+
+3.3 權限撤銷
+50]#
+mysql> select user,host from mysql.user;
+
+mysql> show grants for root@"192.168.4.51";
+
+mysql> revoke grant option on *.* from root@"192.168.4.51";
+
+mysql> revoke delete,update on *.* from root@"192.168.4.51";
+
+mysql> revoke all on *.* from root@"192.168.4.51";
+
+mysql> select  user,host from mysql.user where user="root" and host="192.168.4.51";
+
+删除授权用户
+mysql> drop user  root@"192.168.4.51";
+
+用户修改连接密码
+mysql> set password=password("abc123...A");
+
+管理修改授权用户密码
+mysql> set password for 
+yaya@"192.168.4.%"=password("123qqq...A");
+
+在50本机 授权可以在本机登陆的用户
+mysql> grant all  on  userdb.*  to  tom@"localhost" 
+    -> identified by "123qqq...A";
+
+[root@mysql50 ~]# mysql -utom -p123qqq...A
+mysql>
++++++++++++++++++++++++++
+DBA1_Day05 数据备份与恢复
+物理备份与恢复
+50主机
+   49  mkdir /dbbak
+   50  cp -rp /var/lib/mysql  /dbbak/mysql.bak
+   51  ls /dbbak/
+   52  ls /dbbak/mysql.bak/
+   53  scp -r /dbbak/mysql.bak root@192.168.4.51:/root/
+
+51主机
+   26  systemctl  stop mysqld
+   28  rm -rf /var/lib/mysql
+   30  cp -r /root/mysql.bak /var/lib/mysql
+   32  chown  -R mysql:mysql /var/lib/mysql
+   36  systemctl  start mysqld
+   38  mysql -uroot -pA...qqq123
+
+一 数据完全备份与恢复  mysqldump 
+
+备份
+]# mkdir /dbbak
+]# mysqldump -uroot -pA...qqq123  -A  > /dbbak/full.sql
+]# mysqldump -uroot -pA...qqq123  userdb  > /dbbak/userdb_full.sql
+]# mysqldump -uroot -pA...qqq123  db4 t3  > /dbbak/db4_t3.sql
+]# mysqldump -uroot -pA...qqq123 -B db4 userdb  > /dbbak/twodb.sql
+
+]# ls /dbbak
+]# cat /dbbak/db4_t3.sql
+
+恢复 
+命令用法： ]#  mysql -uroot    -p 密码    库名  <  路径/xxx.sql
+
+练习10分钟到 16：33
+
+二 数据增量备份与恢复
+2.1 实时增量备份/恢复 启用mysql服务的binlog日志文件实现的
+binlog日志的日志使用:
+
+binlog日志介绍?
+
+启用binlog日志 
+
+定义日志文件的名字和存储目录
+
+修改日志文件记录格式 show variables like "binlog_format";
+
+查看binlog日志文件内容、
+
+创建新的日志文件的方法？
+
+
+删除已有日志文件？
+
+binlog日志在记录多条sql命令时，如何区分记录的多条sql命令？
+1 偏移量  
+--start-position=数字
+--stop-position=数字
+
+2 时间点
+--start-datetime="yyyy-mm-dd hh:mm:ss"
+--stop-datetime="yyyy-mm-dd hh:mm:ss"
+
+]#mysqlbinlog --start-position=数字 /logdir/plj.000003 
+]#mysqlbinlog --stop-position=数字 /logdir/plj.000003
+]#mysqlbinlog --start-position=数字  --stop-position=数字 /logdir/plj.000003
+
+]#mysqlbinlog --start-datetime="yyyy-mm-dd hh:mm:ss" /logdir/plj.000003 
+
+]#mysqlbinlog --stop-datetime="yyyy-mm-dd hh:mm:ss" /logdir/plj.000003
+
+]#mysqlbinlog --start-datetime="yyyy-mm-dd hh:mm:ss" --stop-datetime="yyyy-mm-dd hh:mm:ss" /logdir/plj.000003
+
+使用日志恢复数据
+# mysqlbinlog   [选项]  /logdir/mysql-bin.000001  |  mysql   -uroot  -p123456
+
+练习到 10：05
+10：20  上课
+
+2.2 innobackupex
+装包
+]# rpm -ivh  libev-4.15-1.el6.rf.x86_64.rpm 
+]# yum -y install percona-xtrabackup-24-2.4.7-1.el7.x86_64.rpm 
+
+]# man innobackupex  查看命令的帮助
+
+]# innobackupex <选项>
+--host  --port  --user   --password  --databases="db4,db5"  dirname
+
+
+11:20  上课
+
+完全备份与恢复
+
+备份
+]# innobackupex --user root --password A...qqq123  /allbak --no-timestamp
+]# ls  /allbak
+
+恢复
+mysql> drop database db5;  
+]# systemctl  stop  mysqld
+
+准备恢复数据
+]# innobackupex  --apply-log  /allbak
+]# cat  /allbak/xtrabackup_checkpoints
+
+把备份文件拷贝回数据库目录下
+]# rm  -rf  /var/lib/mysql/*
+]# innobackupex  --copy-back /allbak
+
+修改数据库目录的所有者和组用户为mysql
+]# chown  -R  mysql:mysql  /var/lib/mysql
+
+启动数据库服务
+]# systemctl  start mysqld
+ 
+管理员登陆查看数据 ]# mysql  -uroot  -p密码
+                    mysql> select  * from  db5.a;
++++++++++++++++++++++++++++++
+增量备份与恢复
+
+首次备份 备份所有数据
+]# innobackupex  --user root --password A...qqq123 /fullbak --no-timestamp
+]# ls  /fullbak
+]# cat /fullbak/xtrabackup_checkpoints
+
+mysql> insert into  db5.a values(8888);
+
+
+增量备份
+]# innobackupex  --user root --password A...qqq123 --incremental  /new1  --incremental-basedir=/fullbak --no-timestamp
+]# ls /new1
+]# cat /new1/xtrabackup_checkpoints
+
+mysql> insert into  db5.a values(7777);
+
+增量备份
+]# innobackupex  --user root --password A...qqq123 --incremental /new2 --incremental-basedir=/new1  --no-timestamp
+]# ls /new2
+]# cat /new2/xtrabackup_checkpoints
+
+
+增量恢复数据
+mysql> drop database db5;
+mysql> exit;
+]# systemctl stop mysqld
+准备恢复数据
+]# innobackupex --apply-log  --redo-only /fullbak
+合并日志
+]#innobackupex  --apply-log --redo-only /fullbak --incremental-dir=/new1
+]#innobackupex  --apply-log --redo-only /fullbak --incremental-dir=/new2
+把备份文件拷贝回数据库目录下
+]# rm  -rf /var/lib/mysql/*
+]# innobackupex  --copy-back /fullbak
+]# rm  -rf  /new1
+]# rm  -rf  /new2
+修改目录的所有者和组为mysql用户
+]# chown  -R mysql:mysql /var/lib/mysql
+启动数据库服务器
+]# systemctl  start  mysqld
+管理员登陆查看数据 
+mysql> select * from db5.a;
+mysql> insert into db5.a values(66666);
+再次执行增量备份
+]# ]# innobackupex  --user root --password A...qqq123 --incremental  /dir1  
+--incremental-basedir=/fullbak --no-timestamp
+休息10分钟 到  15：25
+练习15分钟到   15：41
+
+恢复完全备份中的某一张表的数据
+
+mysql> create table db5.b(name char(10));
+mysql> insert into db5.b values("bob");
+mysql> use db5;
+mysql> show  tables;
+
+备份所有db5库所有数据
+]# innobackupex  --user root --password A...qqq123  --databases="db5"  /db5bak  --no-timestamp
+
+]# ls  /db5bak
+
+mysql> drop  table b;
+恢复某一张表的数据
+1 导出表信息
+]# innobackupex  --user root --password A...qqq123 --apply-log --export /db5bak
+]# ls /db5bak/db5/
+
+2 创建删除的表（要和原来的表结构一样）
+mysql> create table db5.b(name char(10));
+
+3 删除表空间
+mysql> alter  table db5.b  discard  tablespace;
+
+4 把导出的表信息文件拷贝到数据库目录下 并修改所有者组为mysql
+mysql> system cp /db5bak/db5/b.{cfg,exp,ibd} /var/lib/mysql/db5
+mysql> system chown mysql:mysql /var/lib/mysql/db5/b.*
+
+5 导入表信息
+mysql> alter  table  db5.b  import  tablespace;
+mysql> select  * from  db5.b;
+mysql> system rm -rf /var/lib/mysql/db5/b.cfg
+mysql> system rm -rf /var/lib/mysql/db5/b.exp
+
+++++++++++++++++++++++++++++++++++++
+DBA2_day01 
+
+
+
++++++++++配置主库51   （10：39）
+
+]# vim /etc/my.cnf  启用binlog日志 
+[mysqld]
+log-bin=master51
+server_id=51
+binlog_format="mixed"
+:wq
+
+]# systemctl  restart  mysqld
+
+]# ls /var/lib/mysql/master51.*     查看日志文件
+
+mysql> grant  replication slave on *.*  to  repluser@"%" identified by   用户授权
+    -> "123qqq...A";
+
+mysql> show  master status;  查看日志信息 
+
+++++++++配置从库 52  ( 10:00 )
+测试主库授权用户
+]# mysql  -h192.168.4.51  -urepluser -p123qqq...A
+指定server_id
+]# vim /etc/my.cnf
+[mysqld]
+server_id=52
+:wq
+]# systemctl restart  mysqld
+
+指定主库信息
+]# mysql -uroot -p123qqq..A
+mysql> change master to 
+    -> master_host="192.168.4.51",master_user="repluser",
+    -> master_password="123qqq...A",
+    -> master_log_file="master51.000001", 
+    -> master_log_pos=441;
+mysql> start slave;
+mysql> show slave status\G;
+               Master_Host: 192.168.4.51
+               Slave_IO_Running: Yes  
+               Last_IO_Error: 具体报错信息
+
+               Slave_SQL_Running: Yes
+               Last_SQL_Error: 具体报错信息  
+休息到  10：10
+
+客户端测试配置
+主库51 授权访问数据用户
+mysql> grant all  on gamedb.* to webuser@"%" identified by "123qqq...A";
+
+客户端50 使用授权用户连接主库51
+]# mysql -h192.168.4.51 -uwebuser -p123qqq...A
+mysql> create database gamedb;
+mysql> create table gamedb.a(id int);
+mysql> insert into gamedb.a values(110);
+mysql> insert into gamedb.a values(120);
+mysql> insert into gamedb.a values(119);
+mysql> select  * from gamedb.a;
+
+在从库52上也能看到相同的数据
+mysql> select  * from gamedb.a;  练习到10：50  
+
+休息10分钟到 11：00 
+
+主从同步常用配置选项? 休息到 16：10 
+
+
+主从同步结构模式
+一主一从  ***
+一主多从  ***
+主从从
+主主结构（互为主从）
+主从同步复制模式?
+
++++++++DBA2_day02
+MySQL读写分离
+
+56 :
+
+]# rpm -ivh  maxscale-2.1.2-1.rhel.7.x86_64.rpm
+
+]# cp /etc/maxscale.cnf  /root/
+
+]# vim  /etc/maxscale.cnf
+  9 [maxscale]  定义服务运行时线程的数量
+ 10 threads=auto
+
+ 18 [server1] 定义第1台数据库服务器
+ 19 type=server
+ 20 address=192.168.4.51  ip地址
+ 21 port=3306             端口号
+ 22 protocol=MySQLBackend
+  
+ 24 [server2] 定义第2台数据库服务器
+ 25 type=server
+ 26 address=192.168.4.52 ip地址
+ 27 port=3306            端口号
+ 28 protocol=MySQLBackend
+
+ 35 [MySQL Monitor] 定义监控的数据库服务器
+ 36 type=monitor
+ 37 module=mysqlmon
+ 38 servers=server1, server2  监控server1 和 server2 
+ 39 user=maxmon               连接数据库服务器的用户名
+ 40 passwd=123qqq...A         密码
+ 41 monitor_interval=10000
+
+ 52 #[Read-Only Service] 不定义只读服务器
+ 53 #type=service
+ 54 #router=readconnroute
+ 55 #servers=server1
+ 56 #user=myuser
+ 57 #passwd=mypwd
+ 58 #router_options=slave
+
+ 63 [Read-Write Service] 定义读写分离服务
+ 64 type=service
+ 65 router=readwritesplit
+ 66 servers=server1, server2  读写分离服务在server1, server2之间进行
+ 67 user=monscale             查看访问时连接的用户名和密码的帐号
+ 68 passwd=123qqq...A         密码
+ 69 max_slave_connections=100%
+
+ 75 [MaxAdmin Service] #定义管理管理服务
+ 76 type=service
+ 77 router=cli
+
+ 85 #[Read-Only Listener] 不定义只对服务的端口号
+ 86 #type=listener
+ 87 #service=Read-Only Service
+ 88 #protocol=MySQLClient
+ 89 #port=4008
+
+ 91 [Read-Write Listener] 定义读写分离服务使用的端口号
+ 92 type=listener
+ 93 service=Read-Write Service  读写分离服务名
+ 94 protocol=MySQLClient
+ 95 port=4006
+
+ 97 [MaxAdmin Listener] 定义管理服务使用的端口号
+ 98 type=listener
+ 99 service=MaxAdmin Service
+100 protocol=maxscaled
+101 socket=default
+102 port=4016
+:wq
+
+在主库51 授权   11:30 
+监控用户
+mysql> 
+grant replication slave, replication client on *.* to 
+maxmon@'%'  identified by  '123qqq...A'; 
+
+路由用户
+mysql> 
+grant  select  on  mysql.*  to  monscale@"%" identified by  '123qqq...A';
+
+mysql> select user,host from mysql.user where user in ("maxmon","monscale");
+
+在从52 查看
+mysql> 
+select user,host from mysql.user where user in ("maxmon","monscale");
+在56主机测试授权
+   14  yum -y install mariadb
+   15  which  mysql
+   16  mysql  -h192.168.4.51 -umaxmon -p123qqq...A
+   17  mysql  -h192.168.4.52 -umaxmon -p123qqq...A
+   18  mysql  -h192.168.4.52 -umonscale -p123qqq...A
+   19  mysql  -h192.168.4.51 -umonscale -p123qqq...A
+
+休息到 11：15 
+在56主机上启动服务并查看状态信息
+   26  maxscale  -f  /etc/maxscale.cnf
+   23  ps -C maxscale
+   24  netstat  -utnlp  | grep :4006
+   25  netstat  -utnlp  | grep :4016
+   30  pkill -9 maxscale
+
+56
+[root@host56 ~]# maxadmin -P4016 -uadmin -pmariadb
+MaxScale> list servers
+MaxScale> exit
+
+3 测试配置
+
+3.1 在主库51 授权访问数据的用户
+mysql> create database bbsdb;
+
+mysql> create table  bbsdb.a(id int);
+                                                     
+                                                       
+mysql> grant select , insert on  bbsdb.*  to student@"%" identified by "123qqq...A";
+
+3.2 在从库52 查看
+mysql> desc  bbsdb.a;
+mysql> select user,host from mysql.user where user="student";
+
+3.3 在50主机连接数据读写分离服务器56  （ 14：27 ）
+mysql50 ~]# mysql -h192.168.4.56 -P4006 -ustudent  -p123qqq...A
+mysql> select 
+mysql> insert 
+
+
+MySQL多实例  192.168.4.50
+停止50主机rpm包的mysqld数据库服务
+]# systemctl stop  mysqld 
+]# mv  /etc/my.cnf  /root/
+
+1）装源码包
+]# tar -zxvf mysql-5.7.20-linux-glibc2.12-x86_64. ar.gz
+]# mv mysql-5.7.20-linux-glibc2.12-x86_64  /usr/local/mysql
+]# ls /usr/local/mysql/
+
+
+等上海5分钟  装包  15：30
+休息 10 分钟  15：43  
+
+2）修改主配置文件 
+]# vim /etc/my.cnf
+[mysqld_multi]
+mysqld =  /usr/local/mysql/bin/mysqld_safe
+mysqladmin =  /usr/local/mysql/bin/mysqladmin
+user  = root
+
+[mysqld1]
+datadir=/dir1
+port=3307
+socket=/dir1/mysql1.sock
+log-error=/dir1/mysql1.err
+pid-file=/dir1/mysql1.pid
+
+[mysqld2]
+datadir=/dir2
+port=3308
+socket=/dir2/mysql2.sock
+log-error=/dir2/mysql2.err
+pid-file=/dir2/mysql2.pid
+:wq
+
+]# mkdir  /dir1
+]# mkdir  /dir2
+
+
+4）启动服务
+]# /usr/local/mysql/bin/mysqld_multi  start 1
+]# netstat  -utnlp  | grep  :3307
+]# ls /dir1 查看是否生成配置文件里指定的文件 
+
+
+5）客户端访问测试
+5.1 连接编号是1的mysql服务
+]# /usr/local/mysql/bin/mysql -uroot -p'wlg)Jz&)o3&a' -S /dir1/mysql1.sock
+mysql> alter user  root@"localhost" identified by "123456";
+mysql> exit
+
+使用修改后的密码连接
+]# /usr/local/mysql/bin/mysql -uroot -p123456  -S /dir1/mysql1.sock
+mysql> create database db1;
+mysql> create  table  db1.a(id int);
+mysql> exit
+]# ls /dir1/db1
+
+启动编号是2的mysql服务
+]# /usr/local/mysql/bin/mysqld_multi  start 2
+]# netstat  -utnlp  | grep  :3308
+]# ls /dir2 查看是否生成配置文件里指定的文件 
+
+连接编号是2的mysql服务
+]# /usr/local/mysql/bin/mysql -uroot -p'jQhJwrVl0a#y' -S /dir2/mysql2.sock
+mysql> alter user  root@"localhost" identified by "123456";
+mysql> exit
+ 
+使用修改后的密码连接
+~]# /usr/local/mysql/bin/mysql -uroot -p123456 -S /dir2/mysql2.sock
+mysql> create database gamedb;
+mysql> create table gamedb.b(id int);
+mysql> insert into gamedb.b values(999);
+mysql> select  * from gamedb.b;
+mysql> exit
+
+]# ls /dir2/gamedb
+
+停止服务
+]# /usr/local/mysql/bin/mysqld_multi --user=root --password=123456 stop 1
+]# netstat  -utnlp  | grep  :3307
+
+
+]# /usr/local/mysql/bin/mysqld_multi --user=root --password=123456 stop 2
+]# netstat  -utnlp  | grep  :3308
+
+休息 10 分钟 到  17：00 
+++++++MySQL性能调优  (DAB2_day05)
+
+
+DBA2_day03  部署mysql高可用集群
+什么是集群？ 集群的分类？ HA（keepalived）    LB(LVS Haproxy nginx)
+MHA软件 +  一主多从主从同步结构 
+
+1 拓扑规划
+
+2 部署集群环境
+2.1 在所有数据库服务器上安装mha_node软件包
+2.2 在管理主机上安装mha_node和mha_manager软件包
+2.3 部署所有mysql数据库服务器之间可以互相ssh免密登陆（使用的是对方的root）
+2.4 部署管理主机可以ssh免密登陆所有mysql数据库服务器（使用的是对方的root）
+
+3 部署MHA集群
+3.1 部署mysql 一主多从 主从同步结构
+配置主库51     
+配置备用主库52
+配置备用主库53
+配置纯从库54
+配置纯从库55
+
+
+3.2 配置管理主机56
+3.2.1 创建主配置文件
+ ]# mkdir /etc/mha
+ ]# cp  mha4mysql-manager-0.56/samples/conf/app1.cnf /etc/mha/
+ ]# ls /etc/mha/app1.cnf
+
+3.2.2 编辑主配置文件
+ ]# vim   /etc/mha/app1.cnf
+[server default]
+manager_workdir=/etc/mha
+manager_log=/etc/mha/manager.log
+master_ip_failover_script=/etc/mha/master_ip_failover
+
+ssh_user=root
+ssh_port=22
+
+repl_user=repluser
+repl_password=123qqq...A
+
+user=root
+password=123qqq...A
+
+[server1]
+hostname=192.168.4.51
+candidate_master=1
+
+[server2]
+hostname=192.168.4.52
+candidate_master=1
+
+[server3]
+hostname=192.168.4.53
+candidate_master=1
+
+[server4]
+hostname=192.168.4.54
+no_master=1
+
+[server5]
+hostname=192.168.4.55
+no_master=1
+:wq
+
+3.3.3  根据app1.cnf的设置 做对应的配置
+
+3.3.3.1  创建故障切换脚本
+]# cp mha-soft-student/master_ip_failover  /etc/mha/
+]# chmod +x /etc/mha/master_ip_failover
+
+]# sed -n '35,38p' /etc/mha/master_ip_failover 
+my $vip = '192.168.4.100/24';  # Virtual IP 
+my $key = "1"; 
+my $ssh_start_vip = "/sbin/ifconfig eth0:$key $vip";
+my $ssh_stop_vip = "/sbin/ifconfig eth0:$key down";
+
+3.3.3.2 把vip地址192.168.4.100 部署在当前主库51 上
+51]# ifconfig  eth0:1 192.168.4.100/24
+51]# ifconfig  eth0:1
+
+3.3.3.3 在所有数据库服务器添加监控用户
+mysql> grant all  on *.* to   root@'%'  identified  by  '123qqq...A'; 
+
+
+3.2.2 测试主配置文件/etc/mha/app1.cnf  休息到 15：15
+56 ]# masterha_check_ssh --conf=/etc/mha/app1.cnf
+56 ]# masterha_check_repl --conf=/etc/mha/app1.cnf
+
+3.2.3 启动管理服务并查看服务状态信息
+56 ]# masterha_manager  --conf=/etc/mha/app1.cnf  --remove_dead_master_conf --ignore_last_failover 
+
+Tue Jan 15 16:11:23 2019 - [warning] Global configuration file /etc/masterha_default.cnf not found. Skipping.
+Tue Jan 15 16:11:23 2019 - [info] Reading application default configuration from /etc/mha/app1.cnf..
+Tue Jan 15 16:11:23 2019 - [info] Reading server configuration from /etc/mha/app1.cnf..
+
+
+
+56]# masterha_check_status --conf=/etc/mha/app1.cnf
+app1 (pid:29307) is running(0:PING_OK), master:192.168.4.51
+
+16：35
+4 测试配置MHA配置
+4.1 在主库51上授权访问数据的用户
+mysql> create database db8;
+mysql> create table db8.atab(id int);
+mysql> grant insert,select on db8.* to yaya888@"%" identified by "123qqq...A";
+
+4.2 客户端50 连接vip地址 192.168.4.100访问数据库服务
+~]# mysql -h192.168.4.100 -uyaya888 -p123qqq...A
+mysql> insert into  db8.atab values(110);
+mysql> insert into  db8.atab values(120);
+mysql> insert into  db8.atab values(119);
+mysql> select  * from  db8.atab;
+
+4.3 测试高可用功能
+
+1 停止51上的数据库服务
+2 客户端50依然可以连接vip地址192.168.4.100 访问数据库服务
+3 在管理主机56的app1.cnf文件里 主库51的配置被删除了
+4 所有从库都自动把主库master_host 字段值指向新选举出来的主库ip
+
+17:30
+5 把宕机的主库修复后添加到集群里
+5.1 启动51主库的数据库服务器
+5.2 把51指定为当前主库的从库
+5.3 把51的信息写进app1.cnf文件里
+5.4 启动56主机的管理服务
+5.5 查看56主机的管理服务状态信息
+
+++++DBA2_DAY04
+MySQL视图
+
+MySQL存储过程
+
+
+
+
+mysql> create database db9;
+
+mysql> 
+create table  db9.user(
+name char(50),
+password char(1),
+uid int,
+gid int,
+comment varchar(150),
+homedir varchar(150),
+shell char(50)
+);
+
+mysql> system cp /etc/passwd  /var/lib/mysql-files/
+
+mysql> load data  infile "/var/lib/mysql-files/passwd" 
+into table db9.user fields terminated by ":" lines terminated by "\n";
+
+mysql> alter table  db9.user add  
+id int primary  key  auto_increment first;
+
+mysql> use db9;
+mysql> select  * from user;
+
+
+
+mysql> create table t1 select name,uid,shell from user limit 3;
+mysql> create table t2  select name,uid,homedir,password  from user limit 6;
+mysql> select  * from t1, select  * from t2;
+
+
+在创建视图时指定视图表中字段的名字
+mysql> create view  v1(a,b,c,d,e,f,g) 
+as 
+select  * from  t1,t2 where t1.name=t2.name and t1.uid=t2.uid;
+
+在创建视图时，在查询命令里指定字段别名
+mysql> create view  v2
+as
+select 
+t1.name as a,t1.uid as b ,t1.shell as c , 
+t2.name as d ,t2.uid as e,t2.homedir as f, t2.password as g
+from  
+t1,t2 
+where t1.name=t2.name and t1.uid=t2.uid;
+
+在创建视图时，在查询命令里指定字段别名和表的别名
+mysql> create view v3
+as  
+select  
+a.name as aname , b.name as bname , a.uid as auid , b.uid as  buid   
+from t1 a left join t2 b on a.uid=b.uid;
+
+
+mysql> create view v3 as select  * from user;
+ERROR 1050 (42S01): Table 'v3' already exists
+mysql> 
+mysql> create or replace  view v3 as select  * from user;
+Query OK, 0 rows affected (0.03 sec)
+
+mysql> desc v3;
+
+
+
+mysql> create  ALGORITHM=TEMPTABLE view v4 as  select name from user;
+
++++++++++with local check option    10分钟 到 14：28
+
+mysql> create or replace view v11 
+as 
+select * from user where uid>=3 and uid<=10 with local check option;
+
+
+mysql> update v11  set  uid=2  where name="sync";
+ERROR 1369 (HY000): CHECK OPTION failed 'db9.v11'
+
+mysql> update v11  set  uid=11  where name="sync";
+ERROR 1369 (HY000): CHECK OPTION failed 'db9.v11'
+
+mysql> update v11  set  uid=9  where name="sync";
+Query OK, 1 row affected (0.03 sec)
+
+select  * from v11;
+select  * from  user where uid=11;
+
++++++with check option( 默认使用 CASCADED)
+mysql> create view  v12 as select  * from user where uid <=100;
+
+mysql> create view  v13 as 
+select * from v12 where uid>=20  with check option;
+
+mysql> update v13 set uid=19 where name="nobody";
+ERROR 1369 (HY000): CHECK OPTION failed 'db9.v13'
+
+mysql> update v13 set uid=200 where name="nobody";
+ERROR 1369 (HY000): CHECK OPTION failed 'db9.v13'
+
+mysql> update v13 set uid=88 where name="nobody";
+Query OK, 1 row affected (0.03 sec)
+Rows matched: 1  Changed: 1  Warnings: 0
+
+mysql>  select  name,uid from v13;
+mysql>  select  name,uid from v12;
+mysql>  select  name,uid from user;
+
+10分钟 到  14：51  休息 10分钟到 15：00 
++++++++++++++++++++++++++++++++++++++++++++++++
+
+存储过程的基本使用
+
+创建存储过程
+use db9;
+
+delimiter  //
+create procedure db9.p1()
+begin
+  select  * from  db9.user where id = 1;
+  select  * from  db9.t1;
+end
+//
+delimiter ;
+
+调用
+
+call  db9.p1() ;
+call  db9.p1;
+
+use db9;
+call  p1;
+
+
+查看当前库调用的存储过程
+mysql> show procedure status\G;
+
+查看过程的具体代码
+mysql> select db,name,type,body
+from mysql.proc
+where
+type="PROCEDURE" and  name="p1";
+
+查看有那些存储过程
+mysql> select db,name,type 
+from mysql.proc    
+where  
+type="PROCEDURE" and  name="p1";
+
+删除
+mysql> drop procedure db9.p1;
+
+++++++++++++++++++++++++++++++++++++++++
+delimiter  //
+create procedure  p2()
+begin
+   declare x int;
+   declare name char(3) default  "bob";
+   set x=9;
+   select x , name;
+end
+//
+delimiter  ;
+
+call p2;
+
+
+mysql> set @x=7;
+mysql> set @name="lucy";
+mysql> select @x,@name;
++------+-------+
+| @x   | @name |
++------+-------+
+|    7 | lucy  |
++------+-------+
+
+算数运算 +  -  *  /  %
+
+
+use  db9;
+delimiter  //
+create procedure  p3()
+begin
+  declare x int default 0;
+  declare y int default 0;
+  declare z int default 0;
+  select count(name) into x from db9.user where shell="/bin/bash";  
+  select count(name) into y from db9.user where shell="/sbin/nologin";  
+  set z = x  + y ;
+  select z;
+end
+//
+delimiter  ;
+call  p3;
+
+休息到 17：20 
+
+
+
+参数类型 
+in 传递数据给存储过程处理  
+out 接收存储过程的处理数据  
+inout 具体前2者的功能（传递数据和  接收处理的数据） 
+
+delimiter  //
+create procedure p5( in  a int , in b int)
+begin
+    declare x  int ;
+    declare y  int ;
+    declare z  int ;
+    set x = a ;
+    set y = b ;
+    set z = x  + y;
+    select z;
+end
+//
+delimiter  ;
+call p5();
+call  p5(10,10);
+call  p5(20,30);
+set @i = 1 ;
+set @j = 2 ;
+call  p5(@i , @j );
+
+++++++++++++++++++++++++++++++++++++++++++++++
+drop  procedure if  exists p6;
+delimiter  //
+create procedure p6( out x int )
+begin
+     select count(id) into x from db9.user;
+     select x;
+end
+//
+delimiter  ;
+
+select @k;
+
+call  p6(@k);
+
+select @k;
+
+call  p6(7); 报错
+                     练习到 09 ： 35 
+++++++++++++++++++++++++++++++++
+inout   有in 和 out 2者的综合 
+
+delimiter  //
+create procedure  p7(inout x int)
+begin
+     select x;
+     select count(name) into x from db9.user where shell!="/sbin/nologin";
+     select x;
+end
+//
+delimiter  ;
+
+call  p7(2); 报错
+call  p7(); 报错
+
+set  @i=1;
+call  p7(@i);
+select  @i;
+
+                 练习到 10：53
+++++++++++++++++++++++++++++++++++++++
+delimiter  //
+create procedure  priname( in username char(10) )
+begin
+   select  * from  db9.user where name=username;
+end
+//
+delimiter  ;
+
+call  priname("tom");
+call  priname("root");
+
+
+休息到 10：15 
+++++++++++++++++++++++++++++++++
+delimiter  //
+create procedure  pnum( in shell_name char(30) )
+begin
+   declare num int default 0;
+   select  count(name) into num from  db9.user where shell=shell_name;
+   select num;
+end
+//
+delimiter  ;
+
+call  pnmu("/bin/bash");
+call  pnmu("/sbin/nologin");
+call  pnmu("abc");
+
+++++++++++++++++++++++++++++++++
+
+delimiter  //
+create procedure  p13()
+begin
+  if 1 < 2  then
+    select  * from  db9.user where id=1;
+  else
+    select  * from  db9.user where id=9;  
+  end if;
+end
+//
+delimiter  ;
+
+++++++++++++++++++++++++++++
+delimiter  //
+create procedure  p15()
+begin
+    while 1 = 2  do
+       select 1;
+    end while;
+end
+//
+delimiter  ;
+
+
+delimiter  //
+create procedure  p16()
+begin
+    while 1 = 1  do
+       select 1;
+    end while;
+end
+//
+delimiter  ;
+
+++++++++++++++++++++++++++
+delimiter  //
+create procedure  p18(in number int)
+begin
+    declare x int default 1;
+    while x <= number  do
+       select x;
+       set x = x + 1;
+    end while;
+end
+//
+delimiter  ;
+
+call p17(3);
+call p17(9);
+++++++++++++++++++++++++++++
+delimiter  //
+create procedure  p19()
+begin
+   loop
+        select  * from db9.user where id=1;
+   end loop;
+end
+//
+delimiter ;
+
+call p19();
+++++++++++++++++++++++++++++
+delimiter  //
+create procedure  p21()
+begin
+    declare  x  int  default 1;
+    repeat
+         select  x;
+         set x = x + 1;       
+         until   x > 5
+    end  repeat;
+end
+//
+delimiter  ;
+call p21();
+
+11：20 
+
+while 条件 do
+   循环体
+end while;
+
+repeat
+     循环体
+     until 条件
+end  repeat;
+
+loop
+    循环体
+end loop;
+
+循环流程控制语句  shell  break  continue
+                         LEAVE  ITERATE
+
+
+delimiter  //
+create procedure  p24()
+begin
+   declare x  int default 1;
+   loab1:while  x <= 10  do
+           if x = 6 then
+             LEAVE loab1;
+           end if;
+           select  x;
+           set  x  = x  + 1;
+         end while;
+end
+//
+delimiter ;
+
+call p24(); 
+
+delimiter  //
+create procedure  p26()
+begin
+   declare x  int default 1;
+   loab1:while  x <= 10  do
+           if x = 6 then
+              set x = x + 1 ;
+              ITERATE  loab1;
+           end if;
+           select  x;
+           set  x  = x  + 1;
+         end while;
+end
+//
+delimiter ;
+call p26();  8分钟到14：10
++++++++++++++++++++++++++++++++++
+drop  procedure if exists p3;
+delimiter  //
+create procedure  p3(in x int)
+begin
+     if x is null  then
+        select  * from  db9.user where id = 1;
+     else
+        select  * from  db9.user limit x;
+     end if;
+end
+//
+delimiter  ;
+call p3(5);
+call  p3(10);
+select @k;
+call  p3(@k);
+
+
+
+++++++++++++++++++++++++++++
+drop  procedure if exists p4;
+delimiter  //
+create procedure  p4()
+begin
+     declare x int;
+     declare yline int default 1;
+     declare zline int ;
+     declare k int default 0;
+     select count(id) into zline from  db9.user;
+     while yline <= zline  do
+       select uid into x from db9.user where id = yline ;
+       if x % 2 = 0  then
+         select name ,uid  from db9.user where id = yline;
+         set k = k + 1; 
+       end if;
+       set yline = yline + 1;
+     end while;
+     select k;
+end
+//
+delimiter ;
+call  p4();
+
+练习10 分钟 到  15：22
++++++++++++++++++++++++++++++++++++++
+DBA2_day05 
+测试数据分片
+客户端50连接分片服务器访问数据
+]# mysql  -h192.168.4.56  -P8066  -uroot -p123456
+mysql> show databases;
+mysql> use TESTDB;
+mysql> create  table employee2(
+ID int primary key auto_increment,
+sharding_id int,
+name char(30),
+age int
+);
+mysql> desc employee;
+mysql> insert into employee(sharding_id,name,age)values(10001,"bob",19);
+ERROR 1064 (HY000): can't find any valid datanode :EMPLOYEE -> SHARDING_ID -> 10001
+mysql> 
+mysql> insert into employee(sharding_id,name,age) values(10000,"bob",19);
+mysql> insert into employee(sharding_id,name,age) values(10000,"tom",19);
+mysql> insert into employee(sharding_id,name,age) values(10000,"jack",19);
+
+mysql> insert into employee(sharding_id,name,age) values(10010,"jerry",19);
+mysql> insert into employee(sharding_id,name,age) values(10010,"jerry",19);
+mysql> insert into employee(sharding_id,name,age) values(10010,"jerry",19);
+mysql> insert into employee(sharding_id,name,age) values(10010,"jerry",19);
+mysql> select  * from employee;
+
+分别在数据库服务器 53 54 55 本机 查看 表及记录
+
+修改56 主机分片规则配置文件 让数据库可以分片存储到服务55里
+]#/usr/local/mycat/bin/mycat stop
+]# vim /usr/local/mycat/conf/partition-hash-int.txt
+10000=0
+10010=1
+10020=2
+:wq
+]#/usr/local/mycat/bin/mycat start
+]# netstat -utnlp  | grep :8066
+
+客户端50连接分片服务器访问数据
+]# mysql  -h192.168.4.56  -P8066  -uroot -p123456
+mysql> use TESTDB;
+mysql> insert into employee(sharding_id,name,age) values(10020,"mack",19);
+mysql> insert into employee(sharding_id,name,age) values(10020,"mack",19);
+mysql> select  * from employee;
+分别在数据库服务器 53 54 55 本机 查看 表及记录 ，值在55主机能查看到记录mack 
+
+休息到 10：05 
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+mysql性能优化
+服务运行参数设置
+
+mysql> show variables;
+mysql> show variables like "%关键字%";
+mysql> show variables like "max_connections";
+mysql> set global  max_connections=300;
+
+vim  /etc/my.cnf
+[mysqld]
+max_connections=300
+:wq
+
+mysql> show  global  status;
+mysql> show  global  status like "%time%";
+
+Max_used_connections/max_connections=0.85  * 100%  = 85%
+
+
+mysql> show variables like  "%timeout%";
+
+
+启用查询日志 
+]# vim /etc/my.cnf
+[mysqld]
+general-log
+:wq
+
+]# systemctl  restart  mysqld
+]# ls /var/lib/mysql/*.log
+]# tail  -f  日志文件名 （执行1条sql命令日志会记录一条）
+
+
+启用慢查询日志
+]# vim /etc/my.cnf
+[mysqld]
+slow-query-log
+log-queries-not-using-indexes
+:wq
+
+]# mysqldumpslow /var/lib/mysql/mysql50-slow.log > /root/slow.txt
+
+
+mysql> show variables like "query_cache%";
+mysql> show global status  like "qcache%";
+  
+  Qcache_hits             30
+  Qcache_inserts          100       
+
+
+休息到 15:10
+
+DBA2课程内容总结
+mysql 主从同步
+数据读写分离
+数据分片
+mysql集群
+mysql视图 和存储存储过程
+mysql多实例
+mysql性能优化
+PXC
+
+192.168.4.50 
+
+
++++++++++++++++++++++++++++
+DB 数据库   
+DBMS 数据库管理系统 （mysql  Oracle  SQL server）
+DBS  数据库系统   51  55
+
+RDBMS 关系型数据库管理系统
+
+NoSQL 5天( Redis  MongoDB )
+
+NoSQL_DAY01
+
+部署Redis服务 （192.168.4.50）
+装包
+]# rpm -q gcc
+]# yum -y  install gcc
+]# rpm -q gcc
+]# tar -zxvf redis-4.0.8.tar.gz 
+]# cd redis-4.0.8/
+]# make
+]# make install
+
+初始化配置
+redis-4.0.8]# ./utils/install_server.sh
+Welcome to the redis service installer
+This script will help you easily set up a running redis server
+
+Please select the redis port for this instance: [6379] 
+Selecting default: 6379
+Please select the redis config file name [/etc/redis/6379.conf] 
+Selected default - /etc/redis/6379.conf
+Please select the redis log file name [/var/log/redis_6379.log] 
+Selected default - /var/log/redis_6379.log
+Please select the data directory for this instance [/var/lib/redis/6379] 
+Selected default - /var/lib/redis/6379
+Please select the redis executable path [/usr/local/bin/redis-server] 
+Selected config:
+Port           : 6379
+Config file    : /etc/redis/6379.conf
+Log file       : /var/log/redis_6379.log
+Data dir       : /var/lib/redis/6379
+Executable     : /usr/local/bin/redis-server
+Cli Executable : /usr/local/bin/redis-cli
+Is this ok? Then press ENTER to go on or Ctrl-C to abort.
+Copied /tmp/6379.conf => /etc/init.d/redis_6379
+Installing service...
+Successfully added to chkconfig!
+Successfully added to runlevels 345!
+Starting Redis server...
+Installation successful!
+[root@mysql50 redis-4.0.8]# netstat -utnlp  | grep  :6379
+tcp        0      0 127.0.0.1:6379          0.0.0.0:*               LISTEN      23482/redis-server  
+[root@mysql50 redis-4.0.8]# 
+
+]# /etc/init.d/redis_6379 status
+]# /etc/init.d/redis_6379 stop
+]# /etc/init.d/redis_6379 start
+]# /etc/init.d/redis_6379 status
+
+在本机访问redis服务
+[root@mysql50 ~]# redis-cli 
+127.0.0.1:6379> ping
+PONG
+127.0.0.1:6379> exit
+[root@mysql50 ~]#
+
+[root@mysql50 ~]# redis-cli 
+127.0.0.1:6379> set name bob  存数据
+OK
+127.0.0.1:6379> get name      取数据
+"bob"
+127.0.0.1:6379> exit  断开连接
+[root@mysql50 ~]#
+
+[root@mysql50 ~]# /etc/init.d/redis_6379  stop
+Stopping ...
+Redis stopped
+[root@mysql50 ~]# /etc/init.d/redis_6379  start
+Starting Redis server...
+[root@mysql50 ~]# 
+[root@mysql50 ~]# redis-cli 
+127.0.0.1:6379> get name
+"bob"
+127.0.0.1:6379> get age
+(nil)
+127.0.0.1:6379> exit
+[root@mysql50 ~]# 
+
+常用操作指令
+
+redis服务配置文件解析
+]# /etc/init.d/redis_6379 stop
+]# vim /etc/redis/6379.conf
+93 port 6350
+70 bind 192.168.4.50
+501 requirepass 123456
+:wq
+]# /etc/init.d/redis_6379 start
+
+]# netstat -utnlp | grep  :6350
+
+[root@mysql50 ~]# redis-cli  -h 192.168.4.50  -p 6350 连接服务
+192.168.4.50:6350> ping
+(error) NOAUTH Authentication required.
+192.168.4.50:6350> 
+192.168.4.50:6350> auth 123456  输入密码
+OK
+192.168.4.50:6350> ping
+PONG
+192.168.4.50:6350> exit
+
+连接时 直接带密码
+[root@mysql50 ~]# redis-cli  -h 192.168.4.50  -p 6350 -a 123456
+192.168.4.50:6350> ping
+PONG
+192.168.4.50:6350>
+
+修改脚本
+]#vim  /etc/init.d/redis_6379 
+43            $CLIEXEC -h 192.168.4.50 -p 6350 -a 123456 shutdown
+:wq
+
+使用脚本停止服务
+]# /etc/init.d/redis_6379 stop
+
+]# netstat -utnlp  | grep  :6350 没有查看到端口 说明使用脚本可以停止服务了
+
+
++++++++LNMP+redis   (192.168.4.50) 休息到 10：28 
+部署LNMP环境
+安装源码nginx 
+[root@mysql50 ~]# rpm -q httpd
+未安装软件包 httpd 
+[root@mysql50 ~]# rpm -q gcc
+gcc-4.8.5-16.el7.x86_64
+]# yum -y  install zlib-devel pcre-devel openssl-devel
+]# tar -zxvf nginx-1.12.2.tar.gz
+]# cd nginx-1.12.2/
+]# ./configure --prefix=/usr/local/nginx
+]# make
+]# make install
+]# ls /usr/local/nginx/
+conf  html  logs  sbin
+
+修改配置文件并启动服务
+]# vim /usr/local/nginx/conf/nginx.conf
+ 65         location ~ \.php$ {
+ 66             root           html;
+ 67             fastcgi_pass   127.0.0.1:9000;
+ 68             fastcgi_index  index.php;
+ 69         #fastcgi_param  SCRIPT_FILENAME  /scripts$fastcgi_script_name;
+ 70             include        fastcgi.conf;
+ 71         }
+:wq
+
+]# /usr/local/nginx/sbin/nginx  -t  检查配置
+]# /usr/local/nginx/sbin/nginx      启动服务
+]# netstat -utnlp  | grep  :80      查看端口
+
+安装php-fpm 并运行服务
+]# yum -y  install php-fpm-5.4.16-42.el7.x86_64.rpm
+]# systemctl  start  php-fpm
+]# netstat -utnlp  | grep  :9000
+
+编写PHP文件
+]#vim  /usr/local/nginx/html/test.php
+<?php
+phpinfo();
+?>
+
+打开真机浏览器 访问 php文件  http://192.168.4.50/test.php
+
+
+休息 15分钟 到  11：16 
+
+安装redis服务软件包并运行服务
+]# /etc/init.d/redis_6379 start
+]# netstat  -utnlp  | grep  :6350
+
+配置php支持Redis 服务
+
+安装连接redis服务 模块软件包
+]# yum -y  install php
+]# yum -y  install autoconf  automake 
+]# rpm -ivh php-devel-5.4.16-42.el7.x86_64.rpm 
+
+]# tar  -zxvf php-redis-2.2.4.tar.gz 
+]# cd phpredis-2.2.4/
+
+]# phpize  检测php环境 
+]# ./configure   --with-php-config=/usr/bin/php-config
+]# make
+
+]# make install
+Installing shared extensions:     /usr/lib64/php/modules/  提示模块安装目录
+
+]# ls  /usr/lib64/php/modules/redis.so  查看模块文件
+
+配置php加载模块
+]# vim /etc/php.ini
+ 728 extension_dir = "/usr/lib64/php/modules/"
+ 730 extension = "redis.so"
+:wq
+
+]# systemctl  restart php-fpm
+
+]# php -m  | grep  -i  redis  验证模块是否加载成功
+redis
+
+验证配置
+]# cp linkredis.php   /usr/local/nginx/html/
+]# vim  /usr/local/nginx/html/linkredis.php
+<?php
+$redis = new redis();
+$redis->connect('192.168.4.50',6350);
+$redis->auth("123456");
+$redis->set('school','tarena');
+echo  $redis->get('school');
+?>
+:wq
+
+打开浏览器 访问 网页文件 http://192.168.4.50/linkredis.php
+在数据库服务器 50 本机可以查看到变量 school 为成功。
+
+++++++NoSQL_day02 
+环境准备 准备 6台(51-56) redis服务器  以默认配置运行redis服务即可 
+一、创建Redis集群
+1.1 启用集群功能( 51-56 都要配置 时间到 14：40）
+]# /etc/init.d/redis_6379 stop
+
+]# vim /etc/redis/6379.conf
+70 bind 192.168.4.52
+93 port 6352
+815 cluster-enabled yes
+823 cluster-config-file nodes-6352.conf
+829 cluster-node-timeout 5000
+:wq
+
+]# /etc/init.d/redis_6379 start
+
+]# netstat -utnlp  | grep redis-server
+tcp  0  0 192.168.4.52:6352  0.0.0.0:* LISTEN      7469/redis-server 1 
+tcp  0  0 192.168.4.52:16352 0.0.0.0:* LISTEN      7469/redis-server 1 
+
+]# cat /var/lib/redis/6379/nodes-6352.conf  查看集群信息文件
+ee0ff6941c920977e98966a80a6b1835ec4944f6 :0@0 myself,master - 0 0 0 connected
+vars currentEpoch 0 lastVoteEpoch 0
+
+
+2 创建集群
+2.1 部署ruby脚本执行环境 (192.168.4.51)    
+]# yum -y  install ruby rubygems
+]# rpm -ivh ruby-devel-2.0.0.648-30.el7.x86_64.rpm 
+]# gem  install redis-3.2.1.gem 
+
+2.2 创建管理集群的ruby脚本
+]# echo   $PATH
+]# mkdir /root/bin
+]# cp  redis-4.0.8/src/redis-trib.rb /root/bin/
+]# chmod  +x  /root/bin/redis-trib.rb 
+]# redis-trib.rb help
+
+2.3 创建集群
+[root@R51 src]# redis-trib.rb  create  --replicas 1 \
+> 192.168.4.51:6351  192.168.4.52:6352 \
+> 192.168.4.53:6353  192.168.4.54:6354 \
+> 192.168.4.55:6355  192.168.4.56:6356
+
+>>> Creating cluster
+>>> Performing hash slots allocation on 6 nodes...
+Using 3 masters:
+192.168.4.51:6351
+192.168.4.52:6352
+192.168.4.53:6353
+Adding replica 192.168.4.55:6355 to 192.168.4.51:6351
+Adding replica 192.168.4.56:6356 to 192.168.4.52:6352
+Adding replica 192.168.4.54:6354 to 192.168.4.53:6353
+M: a4f02686060ee3baafd8ce12595b88d92eb32141 192.168.4.51:6351
+   slots:0-5460 (5461 slots) master
+M: ee0ff6941c920977e98966a80a6b1835ec4944f6 192.168.4.52:6352
+   slots:5461-10922 (5462 slots) master
+M: 6b45b2ca4f0d7c6ee023dfeb1f501efa7b70cd83 192.168.4.53:6353
+   slots:10923-16383 (5461 slots) master
+S: dc69876f7492e26bbebed89ad5e47440e809d403 192.168.4.54:6354
+   replicates 6b45b2ca4f0d7c6ee023dfeb1f501efa7b70cd83
+S: 6990adc77212188475676683c54da14f95a6cbd8 192.168.4.55:6355
+   replicates a4f02686060ee3baafd8ce12595b88d92eb32141
+S: 9fb0cfbdd5e30beffb0dea30159c8f961c351ea8 192.168.4.56:6356
+   replicates ee0ff6941c920977e98966a80a6b1835ec4944f6
+Can I set the above configuration? (type 'yes' to accept): yes
+>>> Nodes configuration updated
+>>> Assign a different config epoch to each node
+>>> Sending CLUSTER MEET messages to join the cluster
+Waiting for the cluster to join..
+>>> Performing Cluster Check (using node 192.168.4.51:6351)
+M: a4f02686060ee3baafd8ce12595b88d92eb32141 192.168.4.51:6351
+   slots:0-5460 (5461 slots) master
+   1 additional replica(s)
+M: 6b45b2ca4f0d7c6ee023dfeb1f501efa7b70cd83 192.168.4.53:6353
+   slots:10923-16383 (5461 slots) master
+   1 additional replica(s)
+S: dc69876f7492e26bbebed89ad5e47440e809d403 192.168.4.54:6354
+   slots: (0 slots) slave
+   replicates 6b45b2ca4f0d7c6ee023dfeb1f501efa7b70cd83
+S: 9fb0cfbdd5e30beffb0dea30159c8f961c351ea8 192.168.4.56:6356
+   slots: (0 slots) slave
+   replicates ee0ff6941c920977e98966a80a6b1835ec4944f6
+M: ee0ff6941c920977e98966a80a6b1835ec4944f6 192.168.4.52:6352
+   slots:5461-10922 (5462 slots) master
+   1 additional replica(s)
+S: 6990adc77212188475676683c54da14f95a6cbd8 192.168.4.55:6355
+   slots: (0 slots) slave
+   replicates a4f02686060ee3baafd8ce12595b88d92eb32141
+[OK] All nodes agree about slots configuration.
+>>> Check for open slots...
+>>> Check slots coverage...
+[OK] All 16384 slots covered.
+[root@R51 src]# 
+
+3 查看集群中主机状态信息
+]# cat /var/lib/redis/6379/nodes-6354.conf 
+]# redis-cli  -h 192.168.4.54  -p 6354 
+> cluster info
+> clusert nodes
+集群创建失败的解决办法
+]# redis-cli  -h x.x.x.x  -p xxxx  shutdown
+]# rm -rf  /var/lib/redis/6379/*
+]# /etc/init.d/redis_6379 start
+]# netstat -utnlp  | grep redis_server
+
+再次执行创建集群命令
++++++++++++++++++++++++++++++++++++++++++++
+
+*****访问集群存取数据工作过程？****  休息到  17：10 
+
+4 测试集群 在192.168.4.50 访问集群存取数据(可以连接任意一台主库的ip地址)
+]# redis-cli  -c  -h 192.168.4.51 -p 6351
+192.168.4.51:6351> keys *
+(empty list or set)
+192.168.4.51:6351> 
+192.168.4.51:6351> set x 101
+192.168.4.53:6353> keys *
+1) "x"
+
+主库对应的从库，会自动把数据同步到本机。
+
+在管理主机51上 执行如下操作
+]# redis-trib.rb  info 192.168.4.51:6351  查看数据存储情况
+]# redis-trib.rb  check 192.168.4.51:6351 查看集群信息
+
+主库 宕机后，对应的从库会自动升级 为主库 （ 5分钟 ）
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+二、管理集群
+
+准备2台新的虚拟机ip 地址分别为 192.168.4.57  192.168.4.58 
+运行redis服务并启用的集群配置
+
+2.1 向集群里添加新主机
+
+2.1.1 添加master角色主机  (192.168.4.57) 练习到 09：38
+添加master主机  ]# redis-trib.rb   add-node  192.168.4.57:6357   192.168.4.51:6351
+
+检查主机        ]# redis-trib.rb   check 192.168.4.51:6351
+
+重新分片        ]# redis-trib.rb   reshard  192.168.4.51:6351
+            指定移出hash槽个数   4096
+            指定接收hash槽主机ID 57主机的ID值
+            指定移出hash槽主机ID all
+            同意这样分片 yes
+
+检查主机        ]# redis-trib.rb   check 192.168.4.51:6351
+
+客户端连接主库57 可以存取数据  ]#  redis-cli  -c  -h 192.168.4.57 -p 6357
+                               > keys *
+                               > set  name  bob
+                               > get  name
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+2.1.2 添加slave角色主机  192.168.4.58  （ 练习到 10：00 ）
+
+]# redis-trib.rb   add-node  --slave  192.168.4.58:6358  192.168.4.51:6351
+]# redis-trib.rb check 192.168.4.51:6351
+
+客户端连接主库58 可以查看到数据 ]#  redis-cli  -c  -h 192.168.4.58 -p 6358
+                                    > keys *
+
+休息到 10：10 
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+2.2 从集群里移除主机
+2.2.1 移除slave角色主机  (192.168.4.58)
+]# redis-trib.rb   del-node 192.168.4.51:6351  cc29d2177fce10302fa7a9ec8fe93407d5972239
+
+]# redis-trib.rb check  192.168.4.51:6351
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+2.2.2 移除master角色主机  (192.168.4.57) 练习 到 10：44 
+
+释放占用的hash槽 ]# redis-trib.rb   reshard 192.168.4.51:6351
+     指定移出hash槽个数    4096
+     指定接收hash槽主机ID  写任意一个主库ID值
+     Source node #1:       写57主机的ID值
+     Source node #2:       done
+     同意这样分片          yes
+
+移除master主机  ]# redis-trib.rb  del-node 192.168.4.51:6351  cc88ecaec884770bb75dbfc3ee5f915561ca809c 
+
+检测集群 ]# redis-trib.rb check 192.168.4.51:6351
+++++++++++++++++++++++++++++++++++++++++++++++
+重新平均分配hash槽 ]# redis-trib.rb   rebalance  192.168.4.51:6351
+
+查看主从角色的命令> info replication
+
++++++++++++++++++++++++
+把移除的redis服务器57 和 58  再添加到集群里。
+
+> cluster  reset    在redis服务器上执行 重置集群配置 的命令
+
+在管理主机上执行 添加 master 主机 或slave 主机的命令
+
+++++++++++++++++++++++++++++
+
+思考：
+1 如果先移除主库 对应的从库状态如何？
+2 什么情况下集群会无法工作？
+
+练习到  14：30
+
+把redis集群里的主机 恢复为独立的redis服务器(51-58)
+]# redis-cli  -h 192.168.4.51 -p 6351 shutdown
+]# rm -rf /var/lib/redis/6379/*
+]# vim /etc/redis/6379.conf  (把与集群配置相关的 3项 注释)
+]# /etc/init.d/redis_6379 start
+]# netstat -utnlp  | grep  redis-server
+   
+休息到  15：05 
++++++++++++++++++
+NoSQL_DAY03
+Redis主从复制
+
+命令行指定主库 > slaveof  主库ip  端口
+命令行把主库恢复为主库 > slaveof no one
+
+带密码的主库库设置
+[root@R52 ~]# sed -n '282p;289p' /etc/redis/6379.conf 
+slaveof  192.168.4.51 6351 主库ip及端口
+masterauth 123456 主库密码
+
+哨兵服务配置文件
+[root@R52 redis-4.0.8]# cat  /etc/sentinel.conf
+bind 0.0.0.0
+sentinel monitor  redis51  192.168.4.51  6351  1
+sentinel auth-pass redis51 123456
+[root@R52 redis-4.0.8]# 
+
+启动哨兵服务
+[root@R52 ~]# redis-sentinel  /etc/sentinel.conf
+
+Redis主从复制工作过程 ？
+休息到 17：30 
+++++++++++++++++++++++++
+RDB/AOF持久化
+
+
+AOF持久化
+[root@R51 ~]# redis-cli  -h 192.168.4.51 -p 6351   -a 123456  shutdown
+
+[root@R51 6379]# vim /etc/redis/6379.conf 
+appendfilename  "appendonly.aof"
+appendonly   yes  
+:wq
+
+[root@R51 6379]# /etc/init.d/redis_6379 start
+
+[root@R51 6379]# cd /var/lib/redis/6379/
+[root@R51 6379]# ls
+appendonly.aof  dump.rdb
+
+]# redis-cli  -h 192.168.4.51 -p 6351   -a 123456
+> set x 1
+> set y 2
+> set z 3
+
+[root@R51 6379]# cat appendonly.aof 
++++++++++++++++++++++++++++++++++++++++
+Redis数据类型
+
+数据管理命令：
+string类型
+
+set   get strlen  setrange getrange
+ 
+append  incr incrby incrbyfloat  decr  decrby mget  mset   setbit  bitcount 
+
+
+LIST表
+lpush  llen lrange  lset   lpop   lindex  rpop  rpush
+
+Hash表
+
+hset  hget hmget hmset hgetall hkeys  hvals  hdel
+
+Redis服务技术点总结： 
+数据类型  数据持久化  哨兵服务  主从复制  redis集群  常用命令  
+配置文件参数说明 LNMP+Redis  部署Redis服务器  Redis软件介绍
+
+/var/lib/redis/6379/
+aof  命令   set hset  lset  lpop
+set x  9
+
+rdb dump.rdb
+++++++++++++++++++++++++++++++++++++++++++++
+NoSQL_day04  
+部署MongoDB服务  192.168.4.50
+创建服务工作目录
+]# mkdir /usr/local/mongodb
+]# cd /usr/local/mongodb/
+]# mkdir etc
+]# mkdir log
+]# mkdir -p  data/db
+安装软件
+]# tar -zxvf mongodb-linux-x86_64-rhel70-3.6.3.tgz 
+]# cd mongodb-linux-x86_64-rhel70-3.6.3/
+]# cp -r bin /usr/local/mongodb/
+编写配置文件
+]# vim /usr/local/mongodb/etc/mongodb.conf
+logpath=/usr/local/mongodb/log/mongodb.log
+logappend=true
+dbpath=/usr/local/mongodb/data/db
+fork=true
+:wq
+启动服务
+]# /usr/local/mongodb/bin/mongod -f /usr/local/mongodb/etc/mongodb.conf 
+]# alias startmdb='/usr/local/mongodb/bin/mongod -f /usr/local/mongodb/etc/mongodb.conf'
+查看服务信息
+]# netstat -utnlp | grep  :27017
+]# ps -C mongod
+]# ls /usr/local/mongodb/log/
+]# ls /usr/local/mongodb/data/db
+  
+停止服务
+]# /usr/local/mongodb/bin/mongod -f /usr/local/mongodb/etc/mongodb.conf  --shutdown
+]# alias stopmdb='/usr/local/mongodb/bin/mongod -f /usr/local/mongodb/etc/mongodb.conf  --shutdown'
+
+使用命令别名启动服务
+]# startmdb
+]# netstat -utnlp  | grep :27017
+
+
+连接mongodb服务
+]# /usr/local/mongodb/bin/mongo
+> help
+> exit
+
+
+休息到  10 ： 05
+
+启动mongodb服务定义服务使用ip 地址及端口号
+]# stopmdb
+]# vim /usr/local/mongodb/etc/mongodb.conf
+bind_ip=192.168.4.50
+port=27050
+:wq
+]#startmdb
+]# netstat  -utnlp | grep :27050
+
+连接时指定指ip地址和端口号
+]# /usr/local/mongodb/bin/mongo --host 192.168.4.50 --port 27050
+> exit
+
+练习 到 10:22
+
+++++++++++++++++++++++++++++++++++++++++++++
+二、MongoDB服务基本使用
+2.1 常用管理命令
+> show dbs
+> use gamedb
+> db
+> db.t1.save({name:"bob",age:19,sex:"boy",school:"tarena"})
+> db.t1.save({class:"nsd1810"})
+> show tables
+> db.t1.find()
+> db.t2.save({name:"tom"})
+> db.t1.count()
+> db.t1.find({name:"jim"})
+> db.t1.find({name:"tom"})
+> db.t1.findOne()
+> db.t1.remove({name:"tom"})
+> db.t2.drop()
+> show tables
+> db.t1.remove({})
+> db.t1.find()
+> show tables
+
+休息到 11：15
+
+2.2 mongodb基本数据类型
+字符类型 "abc"  "中国"   
+布尔 true 或false
+空   null
+数值 64位浮点型  8  NumberLong()  NumberInt()
+数组 ["","",""]
+
+字符
+> db.t1.save({name:"tom"})
+布尔
+> db.t1.save({name:"jerry",card:true,marry:false})
+> db.t1.save({name:"tom",card:true})
+空
+> db.t1.save({name:"lilei",ruslt:null})
+数值
+> db.t1.save({name:"mack3",pay:NumberLong(300000)})
+> db.t1.save({name:"mack3",pay:NumberInt(300.56)})
+> db.t1.save({name:"mack3",pay:300.56})
+数组
+> db.t1.save({name:"mack4",like:["a","b","c"]})
+
+代码
+> db.t1.save({ lname:"php",dm:function(){/* <?php echo "abc"; ?>*/}})
+> db.t1.find({lname:"php"})
+
+对象
+> db.t1.save({name:"009", num:ObjectId() })
+
+日期
+> db.t1.save({ name:"jerry" , birthday:new Date() })
+
+
+内嵌  
+> db.t3.save({ 
+birdbook: { worker:"birdboy" ,pay:99 , ver:3.0},
+  tarena: { addr:"bg" ,tel:"12306",per:"shy"}  
+})
+
+正则表达式
+> db.t3.save({name:"cc",bds:/.*a.*/})
+> db.t3.save({name:"dd",bds:/^..$/})
+> db.t3.save({name:"dd",bds:/^a/})
+
+15:00 上课
+
+2.3 数据导入导出   
+数据导出： 把集合的文档存储到系统文件里
+创建存储文件的目录 ]# mkdir /mdb
+导出为json格式
+]# /usr/local/mongodb/bin/mongoexport \
+ --host 192.168.4.50 --port 27050  \
+ -d gamedb -c t1  --type=json > /mdb/gamedb_t1.json
+
+]# ls /mdb/*.json
+]# cat /mdb/gamedb_t1.json 
+
+导出为csv格式
+]# /usr/local/mongodb/bin/mongoexport  \
+ --host 192.168.4.50 --port 27050 \
+ -d gamedb -c t1 -f name,age --type=csv >  /mdb/gamedb_t1.csv
+
+]# ls /mdb/*.csv
+]# cat /mdb/gamedb_t1.csv
+++++++++++++++++++++++++++++++++++++++++
+数据导入： 把系统文件的内容存储到集合里
+
+使用json文件导入数据
+]# /usr/local/mongodb/bin/mongoimport \
+ --host 192.168.4.50 --port 27050 \
+ -d bbsdb  -c user  --type=json  /mdb/gamedb_t1.json 
+
+]#/usr/local/mongodb/bin/mongo --host 192.168.4.50 --port 27050
+> show dbs
+> use bbsdb
+> show tables
+> db.user.count()
+> db.user.find()
+
+使用csv文件导入数据
+]# /usr/local/mongodb/bin/mongoimport \
+   --host 192.168.4.50 --port 27050 \ 
+   -d bbsdb  -c user2  -f user,old \
+   --type=csv  /mdb/gamedb_t1.csv
+
+> use bbsdb
+> db.user2.count()
+> db.user2.find()
+
+休息到 16：05
+]# /usr/local/mongodb/bin/mongoimport \
+  --host 192.168.4.50 --port 27050 \
+  -d bbsdb  -c user5  \
+  --headerline  --type=csv  /mdb/gamedb_t1.csv
+
+> use bbsdb
+> db.user5.count()
+> db.user5.find()
+
+不加 --drop 选项 是追加方式导入数据 反之 删除原表后再导入数据
+]# /usr/local/mongodb/bin/mongoimport \
+  --host 192.168.4.50 --port 27050 \ 
+  -d bbsdb  -c user5  --headerline  --drop  \
+  --type=csv  /mdb/gamedb_t1.csv
+
+> use bbsdb
+> db.user5.count()
+> db.user5.find()
+
+把/etc/passwd文件的内容存储到 bbsdb库里user6集合里。
+]# cp /etc/passwd  /mdb/
+
+]# sed -i  's/:/,/g'  /mdb/passwd
+
+]# sed -i '1iname,password,uid,gid,comment,homedir,shell' /mdb/passwd
+
+]# /usr/local/mongodb/bin/mongoimport --host 192.168.4.50 \
+   --port 27050  -d bbsdb  -c user6 \
+   --headerline --type=csv /mdb/passwd
+
+> use bbsdb
+> db.user6.count()
+> db.user6.find()
+
+2.4 数据备份恢复
+数据备份
+  170  cd /mdb
+  171  ls
+  172  /usr/local/mongodb/bin/mongodump  --host 192.168.4.50 --port 27050 
+  173  ls
+  174  cd dump/
+  175  ls
+  176  ls admin/
+  177  cat admin/system.version.bson  报错
+  178  /usr/local/mongodb/bin/bsondump /mdb/dump/bbsdb/user6.bson 
+
+  180  mkdir /mdbbak
+  181  /usr/local/mongodb/bin/mongodump  --host 192.168.4.50 \
+       --port 27050 -d bbsdb  -c user6  -o  /mdbbak/
+  
+  182  ls /mdbbak/
+  183  ls /mdbbak/bbsdb/
+  184  /usr/local/mongodb/bin/bsondump /mdbbak/bbsdb/user6.bson  
+
+数据恢复
+ 
+]# /usr/local/mongodb/bin/mongorestore  \
+ --host  192.168.4.50  --port 27050 \
+ -d testdb -c teatab  /mdbbak/bbsdb/user6.bson 
+
+
+删除要恢复的库 再执行恢复
+
+]# /usr/local/mongodb/bin/mongorestore  \
+ --host  192.168.4.50  --port 27050   /mdb/dump/
+
++++++++++++++NoSQL_DAY05
+一、部署MongoDB副本集
+1.1 启用副本集配置并指定集群名称 rs1
+1.2 定义集群成员列表
+]#/usr/local/mongodb/bin/mongo --host 192.168.4.51 --port 27051 
+> config={ 
+_id:"rs1", 
+members:[ 
+{_id:0,host:"192.168.4.51:27051"}, 
+{_id:1,host:"192.168.4.52:27052"}, 
+{_id:2,host:"192.168.4.53:27053"} 
+] 
+}
+1.3 创建集群
+> rs.help()
+
+> rs.initiate(config)
+{
+	"ok" : 1,
+	"operationTime" : Timestamp(1547344277, 1),
+	"$clusterTime" : {
+		"clusterTime" : Timestamp(1547344277, 1),
+		"signature" : {
+			"hash" : BinData(0,"AAAAAAAAAAAAAAAAAAAAAAAAAAA="),
+			"keyId" : NumberLong(0)
+		}
+	}
+}
+rs1:SECONDARY> 
+rs1:PRIMARY>
+
+
+创建失败的排错步骤：
+停止3台服务器的mongodb服务
+注释配置文件里的 replSet 配置项
+启动服务
+登陆后，删除的local库
+
+停止3台服务器的mongodb服务
+启用配置文件里的 replSet 配置项
+启动服务
+登陆后 ，定义成员列表 创建集群 查看状态
+++++++++++++++++++++++++++++
+1.4 查看集群信息
+> rs.status()
+> rs.isMaster()
+
+休息到 10：15
+1.5 客户端50 访问集群存取数据
+]#/usr/local/mongodb/bin/mongo  --host 192.168.4.51 --port 27051
+>show dbs
+> use db15
+> show  tables
+> db.a.save({name:"bob"})
+> db.a.find()
+
+在从库自己连接自己 查看是否有主库的数据
+允许对数据做操作 >db.getMongo( ).setSlaveOk( )
+
+1.6 测试集群功能（高可用功能测试）
+停止当前主库的mongodb服务，
+在2个副本主机查看集群状态信息
+把坏掉的主库修复后会自动配置位当前主库的副本主机并自动同步宕机期间的数据
+
+1.7 集群的工作过程 ?
+
+休息到 11：20
+
+二、文档管理 192.168.4.50
+把/etc/passwd 文件的内容存储到bbsdb库下的user6集合里  10分钟
+（使用备份文件恢复 或 数据导入 都可以 完成）
+
+插入文档 save()  insert()  insertMany()
+
+> db.a.save({_id:1,name:"bob"})
+> db.a.save({_id:1,name:"jerry"})
+> db.a.find()
+
+> db.a.insert({_id:1,name:"lucy"})
+> db.a.insert({_id:2,name:"lucy"})
+
+> db.a.insertMany([ {_id:4,name:"lucyA"} , {name:"liliBB"} ,{age:1} ])
+
+> db.a.find()
+
+查询文档 
+find() findOne() limit() skip() sort()  count()
+db.集合名.find({条件},{字段列表})
+> use bbsdb
+
+> db.user6.find({},{_id:0, name:1})
+> db.user6.find({name:"root"})
+> db.user6.find({name:"root"},{uid:1,name:1,_id:0})
+
+> db.user6.find({},{_id:0, name:1}).limit(3)
+> db.user6.find({},{_id:0, name:1}).limit(10)
+
+> db.user6.find({},{_id:0, name:1}).skip(2)
+
+> db.user6.find({},{_id:0, name:1,uid:1}).sort({uid:1})
+> db.user6.find({},{_id:0, name:1,uid:1}).sort({uid:-1})
+
+查询/更新/删除文档的匹配条件
+
+相等比较  
+> db.集合名.find({字段名:值},{字段值列表})
+
+> db.user6.find({uid:1},{_id:0})
+> db.user6.find({name:"root"},{_id:0})
+
+逻辑与比较
+> db.集合名.find({字段名:值，字段名:值},{字段值列表})
+
+> db.user6.find({name:"root",shell:"abc"},{_id:0})
+> db.user6.find({name:"root",shell:"/bin/bash"},{_id:0})
+
+逻辑或比较 $or
+> db.集合名.find({$or:[{条件1},{条件2},{条件3}]},{字段值列表})
+
+> db.user6.find({ $or:[{uid:1},{uid:3},{uid:9}]  },{_id:0,name:1,uid:1})
+> db.user6.find({ $or:[{uid:1},{name:"bin"},{name:"rsync"}]  },{_id:0,name:1,uid:1})
+
+范围比较 $in  $nin
+> db.集合名.find({字段名:{比较命令:[值列表]}},{字段值列表}) 
+
+> db.user6.find({shell:{$nin:["/bin/bash","/sbin/nologin"]}},{_id:0,name:1,shell:1})
+
+> db.user6.find({uid:{$in:[8,4,7]}},{_id:0,name:1,uid:1})
+
+正则匹配
+> db.user6.find({name:/a/},{_id:0,name:1})
+> db.user6.find({name:/^[ac]/},{_id:0,name:1})
+> db.user6.find({name:/d$/},{_id:0,name:1})
+
+数值比较
+$gt $gte  $lt $lte  $ne  
+>   >=      <   <=     !=
+
+> db.user6.find({uid:{$gt:100} },{_id:0,name:1,uid:1} )
+> db.user6.find({uid:{$gt:100} },{_id:0,name:1,uid:1} ).count()
+> db.user6.find({uid:{$gt:100} },{_id:0,name:1,uid:1} ).sort({uid:1})
+> db.user6.find({uid:{$gt:100} },{_id:0,name:1,uid:1} ).sort({uid:1}).limit(1)
+
+> db.user6.find({uid:{$gte:10,$lte:20} },{_id:0,name:1,uid:1} )
+
+空 null
+> db.user6.save({name:null,uid:999})
+> db.user6.find({name:null},{_id:0,name:1,uid:1})
+
+更新文档 update()
+
+db.集合名.update({条件},{字段列表})
+把文档的其他字段都删除了，只留下了修改的字段,且只修改与条件匹配的第1行!!!
+
+
+> db.user6.find({uid:{$lte:5}},{_id:0}).count()
+> db.user6.find({uid:{$lte:5}},{_id:0})
+
+> db.user6.update({uid:{$lte:5}},{password:"AAA"})
+
+> db.user6.find({uid:{$lte:5}},{_id:0}).count()
+> db.user6.find({uid:{$lte:5}},{_id:0})
+
+> db.user6.find({password:"AAA"})
+
+db.集合名.update({条件},{$set:{字段列表}},false,true)
+
+
+$set 条件匹配时，修改指定字段的值
+
+> db.user6.update({uid:{$lte:5}},{ $set:{password:"FFF",gid:2000}},false,true)
+
+
+$unset 删除与条件匹配文档的字段
+
+> db.user6.find({name:"adm"},{_id:0})
+> db.user6.update({name:"adm"},{$unset:{password:"FFF"}})
+> db.user6.find({name:"adm"},{_id:0})
+
+$inc  条件匹配时，字段值自加或自减
+
+> db.user6.find({name:"adm"},{_id:0,uid:1})
+> db.user6.update({name:"adm"},{$inc:{uid:11}}) 正数自加
+> db.user6.update({name:"adm"},{$inc:{uid:-1}}) 负数自减
+
+数组类型的操作命令 休息到 16：10 
+$push  $addToSet $pop $pull
+
+> db.ta.save({name:"bob", like:["a","b","c","d","e"] })
+
+> db.ta.update({name:"bob"},{$push:{like:"A"}})
+> db.ta.update({name:"bob"},{$push:{like:"A"}})
+
+> db.ta.find({name:"bob"},{_id:0})
+
+> db.ta.update({name:"bob"},{$addToSet:{like:"A"}})
+> db.ta.find({name:"bob"},{_id:0})
+> db.ta.update({name:"bob"},{$addToSet:{like:"G"}})
+
+> db.ta.update({name:"bob"},{$pop:{like:1}})
+> db.ta.update({name:"bob"},{$pop:{like::-1}})
+
+> db.ta.update({name:"bob"},{$pull:{like:"A"}})
+
+删除文档
+> db.user6.remove({uid:{$lte:10}})
+> db.user6.remove();
+> show  tables
+> db.user6.drop()
+
++++++++++++++++++++++++++++++++++++++++
+部署LNMP+MongoDB  192.168.4.50  （mongo-1.6.16.tgz）
+1 安装提供mongo模块软件软件包
+  188  tar -zxvf mongo-1.6.16.tgz 
+  190  cd mongo-1.6.16/
+  192  phpize 
+  197  ./configure --with-php-config=/usr/bin/php-config
+  198  make
+  199  make install
+  200  ls /usr/lib64/php/modules/mongo.so
+
+2 配置php程序运行时加载模块
+]# vim /etc/php.ini
+ 728 extension_dir = "/usr/lib64/php/modules/"
+ 729 ; On windows:
+ 730 extension = "redis.so"
+ 731 extension = "mongo.so"
+:wq
+
+]# systemctl  restart php-fpm
+
+]# php -m | grep  -i mongo
+mongo
+
+]# php -m | grep  -i redis
+redis
+
+3 编写连接mongodb服务的php脚本
+]# cp linkmongodb.php  /usr/local/nginx/html/mdb1.php
+]# vim  /usr/local/nginx/html/mdb1.php
+<?php
+$m = new Mongo("mongodb://192.168.4.50:27050");
+$db = $m->buysite;
+$c = $db->usera;
+$data=array("name"=>"bob","age"=>19);
+$c->insert($data);
+echo  "data ok";
+?>
+:wq
+
+]# cp linkmongodb.php  /usr/local/nginx/html/mdb2.php
+]# vim /usr/local/nginx/html/mdb2.php 
+<?php
+$m = new MongoClient("mongodb://192.168.4.53:27053,192.168.4.52:27052,192.168.4.51:27051");
+$db = $m->db1;
+$c = $db->t15;
+$data=array("name"=>"bob","age"=>19);
+$c->insert($data);
+echo  "data ok";
+?>
+:wq
+
+4 在客户端访问网站的php脚本
+]# curl  http://localhost/mdb1.php
+]# curl  http://localhost/mdb2.php
+
+5 在mongodb服务器本机查看是否存储数据了
+]# /usr/local/mongodb/bin/mongo --host 192.168.4.50 --port 27050
+> show dbs
+> use buysite
+> db.usera.find()
+
+]# /usr/local/mongodb/bin/mongo --host 192.168.4.53 --port 27053
+> show dbs
+> use db1
+> db.t15.find()
++++++++++++++++++++++++++++++++++
+安全与监控  6天
+安全4天： 系统安全  服务安全  数据安全 网络安全  
+监控2天： Zabbix监控服务的部署与使用
+
+
+
+
+day01
+一 、Linux基本防护
+1.1 与用户相关的配置文件
+/etc/passwd   /etc/shadow  /etc/group /etc/gshadow  /etc/login.defs /etc/skel
+
+1.2 与用户相关的命令 
+chage   passwd
+
+1.3 伪装登录提示
+/etc/issue、 /etc/issue.net
+
+1.4 文件系统安全
+普通权限 r w x  
+特殊权限 suid sgid 粘滞位
+访问控制列表  facl
+
+给文件加特殊属性  i 和 a  
+对应的管理命令 lsattr  chattr
+
+休息到 10：20  练习 30分钟   到 10：50
+++++++++++++++++++++++++++++++++++++++
+二、用户切换与提权
+
+2.1 su切换用户身份
+]# su   bob
+]# su - bob
+]# su 
+]$ su - -c "命令"  root  （必须提供root用户密码）
+
+su操作的日志文件 ]# vim /var/log/secure
+
+2.2 sudo提升执行权限(让普通用户可以执行root用户的命令)
+休息到 11：25
+
+提权配置文件 /etc/sudoers    ( visudo  或 vim /etc/sudoers )
+
+提权格式?  
+普通用户名   主机名列表=命令列表 （必须写命令的绝对路径 多个命令使用,分隔）
+
+
+用户组提权 和 别名设置
+  377  groupadd  admgrp
+  378  useradd  nb1 
+  379  useradd  nb2
+  380  useradd  nb3
+  381  echo 123456  | passwd --stdin nb1
+  382  echo 123456  | passwd --stdin nb2
+  383  echo 123456  | passwd --stdin nb3
+  384  usermod -G admgrp  nb1
+  385  usermod -G admgrp  nb2
+  386  usermod -G admgrp  nb3
+
+]# vim  /etc/sudoers
+30 Cmnd_Alias SOFTWARE = /bin/rpm, /usr/bin/up2date, /usr/bin/yum
+
+39 Cmnd_Alias STORAGE = /sbin/fdisk, /sbin/sfdisk, /sbin/parted, /sbin/partprobe, /bin/mount, /bin/umount
+
+45 Cmnd_Alias PROCESSES = /bin/nice, /bin/kill, /usr/bin/kill, /usr/bin/killall
+
+
+Host_Alias MYSER=localhost,host50   定义主机别名
+
+%admgrp         MYSER=SOFTWARE , STORAGE, PROCESSES   用户提权
+
+:wq!
+
+]# ssh  nb3@192.168.4.50
+    1  sudo -l
+    2  sudo  /usr/bin/yum  list  | grep elink
+    3  sudo  /usr/bin/yum  list  | grep elinks
+    4  sudo /bin/rpm -q elinks
+    5  sudo  /usr/bin/yum  -y  install elinks
+    6  sudo /bin/rpm -q elinks
+    7  sudo /bin/rpm -e --nodeps elinks
+    8  sudo /bin/rpm -q elinks
+
+启用日志：记录提权用户执行过操作
+
+]# vim /etc/sudoers
+Defaults  logfile="/var/log/sudo"
+:wq!
+
+]# cat  /var/log/sudo  (启用后，只要有用户执行过提权命令就会记录)
+
+
+普通用户查看可以使用的提权命令 ]$ sudo -l
+普通用户执行提权命令 ]$ sudo  提权命令
+
+休息到  15：20 
+ 
+三、SSH访问控制  练习 15 分钟到 16：45
+]# man 5 sshd_config
+]# vim  /etc/ssh/sshd_config
+
+常用配置选项
+port  2222
+ListenAddress  192.168.4.50
+64 #PermitEmptyPasswords no
+
+++++++++++++++++++++++++++++++++++++++
+白名单 仅允许白名单列表里的用户连接ssh服务
+用户设置   AllowUsers  root@192.168.4.254  nb
+用户组设置 AllowGroups 用户组名
+
+黑名单 没有在黑名单列表里的用户可以连接ssh服务
+用户设置   DenyUsers  nb1 nb2 nb3
+用户组设置 DenyGroups 用户组名
++++++++++++++++++++++++++++++++++
+口令认证   65 PasswordAuthentication no|yes
+密钥对
+配置ssh服务仅允许密钥对认证登陆
+
+练习： 53主机配置为仅允许密钥对认证登陆后，主机254 51 53 都可以使用使用 53主机的root用户 登陆53
+
+到 17：40
++++++++++++++++++++++++++
+四 、 SELinux安全防护
+4.1 SELinux介绍
+4.2 SELinux使用
+
+查看安全上下文  
+用户:角色:访问类型:选项...
+
+]# ls -lZ  文件名
+]# ls  -ld 目录名
+]# ps  -aux  -Z  |  grep  进程名
+
+一般操作规律
+移动的文件，原有的上下文属性不变
+复制的文件，自动继承目标位置的上下文
+创建新文件，自动继承父目录上下文
+
+修改文件的上下文
+]# chcon    -t  访问类型  文件名
+]# chcon -R -t  访问类型  目录名
+
+恢复上下文
+]# restorecon     文件名
+]# restorecon -R  目录名
+
+                               练习 15分钟 到 09：45 
+
+SELinux布尔值(bool) 功能开关
+查看布尔值  ]# getsebool  -a  或  getsebool  -a | grep  服务名
+修改布尔值  ]# setsebool  -P  选项=on|off
+
+在50主机运行ftp服务： 并允许匿名用户上传文件和下载文件，可以把文件上传到
+/var/ftp/sharedir目录里。
+
+]# rpm -q vsftpd
+]# yum -y  install vsftpd
+]# vim /etc/vsftpd/vsftpd.conf
+   29 anon_upload_enable=YES   允许匿名用户上传文件
+:wq
+
+]# mkdir  /var/ftp/sharedir    创建上传目录
+]# chmod o+w /var/ftp/sharedir 允许其他用户有写权限
+]# cp /etc/passwd  /var/ftp/sharedir/  创建共享文件
+]# systemctl  start vsftpd
+]# netstat -utnlp  | grep  :21
+[root@host50 sharedir]# getenforce 
+Enforcing
+
+客户端测试  练习到 10：32
+]#  rpm  -q  ftp
+]#  yum  -y  install ftp
+
+]# ftp 192.168.4.50 ---> ftp ----> 回车 ---> ls  ---> cd  sharedir ---> ls
+
+> get  passwd  下载文件成功
+
+> cd  sharedir  切换到上传目录
+> lcd  /etc     切换到客户端本地目录/etc
+> put  hosts    上传失败
+
+> bye  断开连接
+
+设置bool值 允许上传文件               练习到10:45
+]# setsebool  -P ftpd_anon_write=on
+]# setsebool  -P ftpd_full_access=on
+]# getsebool  -a  | grep  ftp
+
++++++获取selinux的报错信息 和 解决办法    11：30
+
+网站服务可以使用8090端口接收连接请求
+]# systemctl  stop  httpd
+]# vim /etc/httpd/conf/httpd.conf
+listen 8090
+:wq
+]# systemctl  start  httpd  启动 报错
+
+]# rpm  -qa  | grep  -i  setroubleshoot
+]# grep  -i setroubleshoot /var/log/messages  | tail  -1
+]# sealert -l 1592dd6b-44b9-4d60-b777-0a405bdf48ec
+]# semanage port -a -t http_port_t -p tcp 8090
+
+]# systemctl  start  httpd        可以正常启动
+]# netstat -utnlp  | grep  :8090
+]# echo  456  > /var/www/html/test.html
+
+]# curl http://localhost:8090/test.html
+456
+
+++++++++++++++++++++++++++++++++++++++++++++
+day02
+一 加密与解密
+[root@room9pc17 ~]# rpm -q  gnupg2
+gnupg2-2.0.22-3.el7.x86_64
+
+[root@room9pc17 ~]# which  gpg
+/bin/gpg
+
+]# gpg --help
+
+
+]# useradd usera
+]# useradd userb
+]# echo 123456  |  passwd --stdin  usera
+]# echo 123456  |  passwd --stdin  userb
+
+]# ssh  -X  usera@localhost
+]# ssh  -X  userb@localhost
+
+gpg 数据对称加密与解密   -c 加密   -d 解密 
+
+发              收
+usera  ------>  userb
+         练习到 14:30
+加密 
+[usera@room9pc17 ~]$ cat a.txt   明文文件
+aab
+aad
+aae
+aaf
+[usera@room9pc17 ~]$  gpg -c  a.txt  (提示输加密密码)
+
+[usera@room9pc17 ~]$ ls a.txt*
+a.txt  a.txt.gpg
+
+]$ cp a.txt.gpg   /tmp/
+
+
+解密
+[userb@room9pc17 ~]$ cat  /tmp/a.txt.gpg   看到的是乱码
+[userb@room9pc17 ~]$ gpg -d a.txt.gpg >  ~/a4.txt (提示输解密密码)
+[userb@room9pc17 ~]$ cat  ~/a4.txt 查看文件内容
+
+++++++++++++++++++++++++++++++
+gpg 数据非对称加密与解密
+
+公钥加密 
+私钥解密
+
+加密        解密
+uesra      userb
+
+userb
+1 创建密钥对  （ 到 15：00 ）
+]# rm -rf  ~/.gnupg/
+[userb@room9pc17 ~]$ gpg --gen-key  创建密钥对
+gpg (GnuPG) 2.0.22; Copyright (C) 2013 Free Software Foundation, Inc.
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.
+
+gpg: 已创建目录‘/home/userb/.gnupg’
+gpg: 新的配置文件‘/home/userb/.gnupg/gpg.conf’已建立
+gpg: 警告：在‘/home/userb/.gnupg/gpg.conf’里的选项于此次运行期间未被使用
+gpg: 钥匙环‘/home/userb/.gnupg/secring.gpg’已建立
+gpg: 钥匙环‘/home/userb/.gnupg/pubring.gpg’已建立
+请选择您要使用的密钥种类：
+   (1) RSA and RSA (default)
+   (2) DSA and Elgamal
+   (3) DSA (仅用于签名)
+   (4) RSA (仅用于签名)
+您的选择？ 
+RSA 密钥长度应在 1024 位与 4096 位之间。
+您想要用多大的密钥尺寸？(2048)
+您所要求的密钥尺寸是 2048 位
+请设定这把密钥的有效期限。
+         0 = 密钥永不过期
+      <n>  = 密钥在 n 天后过期
+      <n>w = 密钥在 n 周后过期
+      <n>m = 密钥在 n 月后过期
+      <n>y = 密钥在 n 年后过期
+密钥的有效期限是？(0) 
+密钥永远不会过期
+以上正确吗？(y/n)y
+
+You need a user ID to identify your key; the software constructs the user ID
+from the Real Name, Comment and Email Address in this form:
+    "Heinrich Heine (Der Dichter) <heinrichh@duesseldorf.de>"
+
+真实姓名：userb
+电子邮件地址：pang@163.com
+注释：teacher
+您选定了这个用户标识：
+    “userb (teacher) <pang@163.com>”
+
+更改姓名(N)、注释(C)、电子邮件地址(E)或确定(O)/退出(Q)？O  (提示输入保护私钥的密码)
+
+]# ls   ~/.gnupg/
+
+休息到  15 : 15
+
+2 userb导出公钥
+~]$ gpg --export -a > ~/userb.pub
+
+3 userb把导出公钥放到公共目录下
+~]$ cp ~/userb.pub  /tmp/
+
+
+usera :              练习10分钟 到 15：50 
+1 usera导入公钥
+
+]$ rm -rf  ~/.gnupg/
+]$ gpg --import  /tmp/userb.pub
+]$ ls ~/.gnupg/
+
+2 usera使用公钥加密文件
+[usera@room9pc17 ~]$ vim test.txt
+[usera@room9pc17 ~]$ cat test.txt  明文文件
+I LOVE BOY 
+I LOVE BOY 
+I LOVE BOY 
+I LOVE BOY 
+[usera@room9pc17 ~]$ gpg -e  -r userb  test.txt   文件加密
+             无论如何还是使用这把密钥吗？(y/N)y
+
+3 usera把加密文件放到公共目录下
+[usera@room9pc17 ~]$ cp  test.txt.gpg  /tmp/
+[usera@room9pc17 ~]$ ls /tmp/test.txt.gpg -l
+-rw-rw-r--. 1 usera usera 354 1月  28 15:36 /tmp/test.txt.gpg
+
+4 userb用户使用私钥解密文件
+]$ gpg -d /tmp/test.txt.gpg > ~/test5.txt  (必须输入私钥的密码)
+
+5 userb查看文件内容
+]$ cat  ~/test5.txt
++++++++++++++++++++++++++gpg 数字签名
+休息到 16：21 
+
+userb使用私钥签名                           练习10分钟 到 16：34 
+[userb@room9pc17 ~]$ vim a1.txt  创建文件
+[userb@room9pc17 ~]$ cat a1.txt 
+abc
+cde
+fgk
+[userb@room9pc17 ~]$ gpg -b a1.txt (数字签名 要输入私钥密码)
+
+[userb@room9pc17 ~]$ ls  ~/a1*
+/home/userb/a1.txt  /home/userb/a1.txt.sig
+
+[userb@room9pc17 ~]$ cp   ~/a1*  /tmp/
+[userb@room9pc17 ~]$ 
+[userb@room9pc17 ~]$ ls /tmp/a1* -l
+-rw-rw-r--. 1 userb userb  12 1月  28 16:01 /tmp/a1.txt
+-rw-rw-r--. 1 userb userb 287 1月  28 16:01 /tmp/a1.txt.sig
+
+[userb@room9pc17 ~]$ gpg --fingerprint    输出私要指纹
+
+usera使用公钥验证签名
+]$ gpg --verify /tmp/a1.txt.sig （root 用户修改了 a1.txt 文件的话 提示签名损坏) 
+gpg: 完好的签名，来自于“userb (teacher) <pang@163.com>”
+[usera@room9pc17 ~]$ cat /tmp/a1.txt
+abc
+cde
+fgk
+[usera@room9pc17 ~]$ 
++++++++++++++++++++++++++++++++++++++++
+二 AIDE入侵检测系统
+2.1 安装提供检测程序的软件包 ]# yum -y  install aide
+
+2.2 编辑主配置文件     休息到 17：30
+]# sed  -i  '99,312s/^/#/'  /etc/aide.conf  注释默认的检测配置
+
+]# vim /etc/aide.conf 
+/root/    FIPSR           #定义检测的目录 和检测规则，写在99行的上方即可
+:wq
+
+]# aide --init                   没有被入侵之前 生成初始信息数据库文件
+ls /var/lib/aide/aide.db.new.gz  查看数据库文件
+
+]# cp /var/lib/aide/aide.db.new.gz /tmp/     把存有初始信息的文件拷贝走
+]# cd  /var/lib/aide/
+]# mv aide.db.new.gz  aide.db.gz             修改文件名
+]# ls  /var/lib/aide/
+aide.db.gz                                   查看修改后的文件名
+
+对被检测的/root 目录做操作 （任何操作都可以）
+  585  lsattr /root/a.txt 
+  586  chattr  -a a.txt 
+  587  rm -rf /root/a.txt*
+  588  ls
+  589  vim passwd 
+  590  vim  b3.txt
+  591  ls -l  mysql-5.7.17.tar 
+  592  chown  mysql:mysql  mysql-5.7.17.tar 
+
+[root@localhost ~]# aide --check
+AIDE 0.15.1 found differences between database and filesystem!!
+Start timestamp: 2019-01-28 17:10:07
+
+Summary:
+  Total number of files:	2029
+  Added files:			1
+  Removed files:		3
+  Changed files:		3
+
+
+
+
+++++++++++++++++++++++++++++++++++++++++
+三 扫描与抓包
+3.1 nmap  扫描
+]# rpm -q nmap
+]# man  nmap
+]# nmap -sP 172.40.52.0/24
+]# nmap -sT 172.40.52.118
+]# nmap -sT -p 8080 172.40.52.118
+]# nmap -sT -n  -p 80 172.40.52.118-200
+]# nmap  -A 192.168.4.50
+]# nmap  -A  192.168.4.50
+]# nmap  -sP 172.40.52.119,117,221
+]# nmap  -sU 192.168.4.51
+]# nmap  -sT -p 80,3306,53 192.168.4.51
+]# nmap  -sT -p 21-110,3306,27017,6379 192.168.4.51
+4.2 tcpdump抓包
+[root@room9pc17 ~]# which tcpdump
+/sbin/tcpdump
+[root@room9pc17 ~]# rpm -qf /sbin/tcpdump
+tcpdump-4.5.1-3.el7.x86_64
+[root@room9pc17 ~]# 
+[root@room9pc17 ~]# rpm -q tcpdump
+tcpdump-4.5.1-3.el7.x86_64
+[root@room9pc17 ~]#
+
+]# man  tcpdump 
+
+]# tcpdump  (默认只抓从eth0接口进出的数据包)
+]# tcpdump -i br1  指定抓包接口
+]# tcpdump -i br1 -c 2 指定抓包个数
+]# tcpdump -i br1 -c 2 -A  以可阅读方式显示抓包信息
+]# tcpdump -i br1 -c 2 -A -w /tmp/one.cap 存储到文件里
+]# ls /tmp/one.cap   
+]# tcpdump  -A -r /tmp/one.cap 读取文件内容
+
+休息到 10 ： 12 
+
+]# tcpdump  -i br1  tcp  port 80
+]# tcpdump  -i br1  tcp  port 22
+]# tcpdump  -i br1  tcp  port 21
+
+]# tcpdump  -i br1  host 172.40.52.143 and tcp  port 21
+]# tcpdump  -i br1 src host 172.40.52.143 and tcp  port 21
+
+抓ftp服务的数据包  10:50 
+]# useradd student
+]# echo abc123  | passwd  --stdin  student
+]# tcpdump -A  -i eth0  tcp port 21 -w /tmp/a3.cap
+
+]# tcpdump -A  -r /tmp/a3.cap | grep -i  student
+]# tcpdump -A  -r /tmp/a3.cap | grep -i  abc123
+]# tcpdump -A  -r /tmp/a3.cap | grep -i  'user\|pass'
+
+
+++++++++++++++++++++++++++++++
+192.168.4.51 做邮件服务器
+收邮件服务 端口 110
+     ]# yum  -y  install dovecot
+     ]# systemctl  start dovecot
+     ]# netstat -utnlp  | grep  :110
+发邮件服务 端口25
+         ]# rpm  -q postfix
+         ]# systemctl  status postfix
+         ]# netstat -utnlp  | grep  :25
+添加邮箱帐号
+         ]#useradd jim
+         ]# echo 123456  | passwd  --stdin jim
+         jim@localhost 邮箱帐号
+         123456 密码
+设置邮箱目录
+        ]# vim /etc/postfix/main.cf
+           419 home_mailbox = Maildir/
+        :wq
+        ]# systemctl  restart postfix
+        ]# cd /etc/dovecot/conf.d/
+        ]# vim  10-auth.conf
+            10 disable_plaintext_auth = no
+        :wq
+        ]# vim 10-mail.conf
+            24 mail_location = maildir:~/Maildir
+        :wq
+        ]# systemctl  restart dovecot
+休息到 11：25
+连接postfix服务发送邮件
+    ]# rpm -q telnet
+    ]# telnet localhost 25        连接postfix服务
+       helo pc51                  定义主机名
+        mail from:root@localhost  发件人
+          rcpt to:jim@localhost   收件人
+             data                 写邮件
+                 i love you boy   邮件内容
+                 i love you boy
+                 i love you boy
+             .                    提交邮件
+          quit                    断开连接
+
+连接dovecot服务收邮件
+      [root@R51 ~]# telnet localhost 110  
+      user jim     登陆用户名
+      pass 123456  登陆密码
+      list         查看邮件
+      retr 1       显示编号是1的邮件内容
+      quit 	   断开连接
+
+]# tcpdump -A  -i lo  tcp port 110
+
+]# tcpdump -w /tmp/mail3.cap -A  -i lo  tcp port 110
+
+]# tcpdump -A  -r /tmp/mail3.cap | grep  -i user
+]# tcpdump -A  -r /tmp/mail3.cap | grep  -i pass
+
+
+安装wireshark
+   ]# yum -y  install wireshark  wireshark-gnome
+
+打开软件
+   应用程序---> 互联网 --> wireshark
+
++++++day03
+系统审计 ?
+
+休息 到  15：10 分 回来  做练习 案例1  
+
+
+
+
+
+二、服务安全
+2.1 安装源码的nginx
+   ]# tar -zxvf nginx-1.12.2.tar.gz
+   ]# cd  nginx-1.1.12
+   ]# yum -y  install gcc
+   ]# yum  -y  install  pcre-devel  zlib-devel   openssl-devel
+   ]# ./configure  --prefix=/usr/local/nginx  --with-http_ssl_module  
+   ]# make install
+   ]# ls  /usr/local/nginx
+   ]# /usr/local/nginx/sbin/nginx 
+   ]# netstat -utnlp  | grep  :80
+   ]# echo abc > /usr/local/nginx/html/a.html
+   ]# echo ABC > /usr/local/nginx/html/b.html
+   ]# curl http://localhost/a.html
+   ]# curl http://localhost/b.html
+不需要的模块使用--without禁用模块
+
+   ]# rm  -rf /usr/local/nginx/html/index.html
+   ]# vim /usr/local/nginx/conf/nginx.conf  
+      server {
+        autoindex on;  
+      :wq
+   ]# /usr/local/nginx/sbin/nginx  -s reload
+
+]# curl --help  查看curl 命令的帮助信息
+[root@room9pc17 ~]# curl -I  http://192.168.4.50/
+HTTP/1.1 200 OK
+Server: nginx/1.12.2
+Date: Tue, 29 Jan 2019 08:40:01 GMT
+Content-Type: text/html
+Connection: keep-alive
+隐藏软件名和版本号
+     修改软件源码
+  ]# vim +48 nginx-1.12.2/src/http/ngx_http_header_filter_module.c
+     static u_char ngx_http_server_string[] = "IIS" CRLF;
+     static u_char ngx_http_server_full_string[] = "IIS" CRLF;
+     static u_char ngx_http_server_build_string[] = "IIS" CRLF;
+  :wq
+  ]# cd nginx-1.12.2/
+  ]# /usr/local/nginx/sbin/nginx -V   获取配置参数
+  ]# ./configure --prefix=/usr/local/nginx --with-http_ssl_module 
+  ]# make
+  ]# make install
+  ]# /usr/local/nginx/sbin/nginx -s stop
+  ]# /usr/local/nginx/sbin/nginx
+
+[root@room9pc17 ~]# curl -I  http://192.168.4.50/
+HTTP/1.1 200 OK
+IIS    显示的是修改后的名字
+Date: Tue, 29 Jan 2019 08:54:31 GMT
+Content-Type: text/html
+Connection: keep-alive
+
+
+限制并发 (该模块可以降低DDos攻击风险)
+          使用的是ngx_http_limit_req_module 模块
+          nginx-1.12.2]# ./configure --help  | grep limit
+
+     ]# vim /usr/local/nginx/conf/nginx.conf
+	http {
+          limit_req_zone $binary_remote_addr zone=one:10m rate=1r/s;
+          server {
+              limit_req zone=one burst=5;
+     :wq
+     [root@host50 ~]# /usr/local/nginx/sbin/nginx -t
+     [root@host50 ~]# /usr/local/nginx/sbin/nginx -s reload
+
+连接测试
+       [root@room9pc17 ~]# ab -c 10  -n 10 http://192.168.4.50/
+       Time taken for tests:   5.001 seconds
+       Complete requests:      10
+       Failed requests:        4
+
+拒绝非法请求
+        ]# vim  /usr/local/nginx/conf/nginx.conf
+           server {
+               if ($request_method !~ ^(GET|POST)$ ) {
+                     return 444;
+               }
+        :wq
+        ]# /usr/local/nginx/sbin/nginx -t
+        ]# /usr/local/nginx/sbin/nginx -s reload
+
+防止buffer溢出
+        ]# vim  /usr/local/nginx/conf/nginx.conf
+        http {
+               client_body_buffer_size  1K;
+               client_header_buffer_size 1k;
+               client_max_body_size 16k;
+               large_client_header_buffers 4 4k;    
+        :wq
+        ]# /usr/local/nginx/sbin/nginx -t
+        ]# /usr/local/nginx/sbin/nginx -s reload
+
+
+mariadb数据库服务安全 （192.168.4.50）
+     ]# yum  -y  install  mariadb-server  mariadb
+     ]# systemctl  start  mariadb
+     ]# netstat  -utnlp  | grep  :3306
+     ]# ls /etc/my.cnf
+     ]# ls /var/lib/mysql
+
+]# mysql_secure_installation 做初始安全配置
+
+]# mysqladmin  -uroot -hlocalhost -p654321  password "abc123"
+
+
++++++Tomcat安全 
+1 运行tomcat服务
+   ]# tar -zxvf apache-tomcat-8.0.30.tar.gz 
+   ]# mv apache-tomcat-8.0.30  /usr/local/tomcat
+   ]# ls /usr/local/tomcat/
+   ]# cd /usr/local/tomcat/bin/
+   ]# ./startup.sh   启动服务
+   ]# netstat -utnlp  | grep  :8080
+   ]# ./shutdown.sh  停止服务
+   ]# netstat -utnlp  | grep  :8080
+
+2 访问tomcat服务
+      ]# echo  123  > /usr/local/tomcat/webapps/ROOT/test.html
+      ]# curl  http://localhost:8080/test.html
+         123
+
+      获取协议头部信息
+      ]# curl  -I  http://localhost:8080/test.html  有的网页文件
+      ]# curl  -I  http://localhost:8080/test2.html 没有的网页文件
+
+10分钟 到 10：50
+  
+隐藏版本
+        ]# yum -y  install java-1.8.0-openjdk-devel 提供jar命令的软件包
+        ]# which  jar
+	]# jar --help
+	]# cd /usr/local/tomcat/lib	
+        ]# jar -xf catalina.jar  提取文件
+        ]# vim org/apache/catalina/util/ServerInfo.properties 修改软件名
+           server.info=nginx
+           server.number=6.0.30.0
+        :wq
+        ]# vim /usr/local/tomcat/conf/server.xml
+         69     <Connector port="8080" protocol="HTTP/1.1"
+         70                connectionTimeout="20000"
+         71                redirectPort="8443"  server="nginx" />
+        :wq
+
+        ]# /usr/local/tomcat/bin/shutdown.sh 
+        ]# /usr/local/tomcat/bin/startup.sh 
+
+        ]# curl  -I  http://localhost:8080/test.html
+        ]# curl  -I  http://localhost:8080/test2.html
+
+使用非root启动tomcat服务
+	]# /usr/local/tomcat/bin/shutdown.sh
+	]# useradd  tomcat
+        ]# chown  -R tomcat:tomcat  /usr/local/tomcat/
+        ]# su  - -c "/usr/local/tomcat/bin/startup.sh"  tomcat
+        ]# ps -aux  | grep  -i java
+
+开机启动
+      ]# vim /etc/rc.local
+          su  - -c "/usr/local/tomcat/bin/startup.sh"  tomcat
+      :wq
+      ]# chmod  +x  /etc/rc.local 
+
+11：30  开始讲新科
+
++++++打补丁
+mkdir /dome
+cd /dome
+
+vim  game.sh
+#!/bin/bash
+echo "abc"
+:wq
+
+]# cp  game.sh  game2.sh 
+]# vim game2.sh 
+#!/bin/bash
+echo "abc"
+echo "ABC"
+:wq
+
+]# diff -u game.sh  game2.sh  >  bd.patch    创建补丁文件bd.patch
+]# cat bd.patch 
+]# rpm -q  patch ||  yum  -y install  patch  安装提供打补丁命令的软件包
+]# which  patch
+]# patch  --help            查看命令帮助信息
+]# patch  -p0 -i bd.patch   打补丁
+]# cat game.sh              查看补丁是否打成功
+
+]# yum  -y  install tree
+]# rm  -rf /demo
+  557  mkdir  -p /demo/source1
+  558  vim /demo/source1/a.sh
+       #!/bin/bash
+       echo "abc"
+       :wq
+
+  559  mkdir /demo/source2/
+  560  cp /demo/source1/a.sh  /demo/source2/
+       vim  /demo/source2/a.sh
+       #!/bin/bash
+       echo "abc"
+       echo "ABC"
+       :wq
+       
+
+]# tree /demo
+]# cd /demo
+]# cp /usr/bin/find  /demo/source1
+]# cp /usr/bin/find  /demo/source2
+]# echo  "111" >> /demo/source2/find 
+
+]# diff -ur   source1  source2 只提示不比较
+]# diff -ura  source1  source2 比较
+
+]# vim  /demo/source2/b.sh
+#!/bin/bash
+echo "aaaaa"
+echo "ddddd"
+:wq
+
+]# tree /demo
+]# diff -uar  source1  source2 只提示不比较
+]# diff -uraN  source1  source2 比较
+
+]# diff -uraN  source1  source2  > code.patch  创建补丁文件
+
+休息10分钟 到 15：20
+++++++++++++++++++++++++++++++++++++++ 16:30 讲课
+打补丁   ]#patch   -p数字 -i  补丁文件
+撤销补丁 ]# patch -R  -p数字 -i  补丁文件
+
+]# mkdir -p  /code/onemonthe/shell
+]# vim /code/onemonthe/shell/a.sh
+#!/bin/bash
+echo "abc"
+:wq
+]# scp  -r /code  root@192.168.4.52:/
+
+]# cp  -a  /code  /code2
+]# vim /code2/onemonthe/shell/a.sh
+#!/bin/bash
+echo "abc"
+echo "1111"
+echo "2111"
+:wq
+]# cd /
+]# diff  -uraN  code  code2 > /root/plj.patch
+]# scp  /root/plj.patch  root@192.168.4.52:/etc/plj.patch
+
+]# ssh  192.168.4.52
+]# cd /
+]# patch -p0  -i  /etc/plj.patch
+]# cat /code/onemonthe/shell/a.sh
+]# patch -R -p0  -i  /etc/plj.patch
+
+]# cd  /code/onemonth/shell
+]# patch -p3  -i  /etc/plj.patch
+]# cat /code/onemonthe/shell/a.sh
+
+
+++++++++++++++++++++++++++++++++
+day04 iptables防火墙服务 ***
+
+防火墙服务服务的组成
+四张表
+raw    状态跟踪
+mangle 打标记
+nat    地址转换
+filter 包过滤
+
+五条链
+INPUT   进入防火墙的数据包
+OUTPUT  从防火墙出去的数据包
+FORWARD 经过防火墙的数据包
+POSTROUTING 路由后
+PREROUTING  路由前
+
+防火墙服务的规则匹配顺序？
+
+
+iptables基本用法
+iptables  [-t 表名]  选项  [链名]  [条件]  [-j 目标操作]
+
+选项  -L  -F  -n --line-numbers 
+
+]# iptables -L
+]# iptables -t filter  -L
+]# iptables -t nat     -L
+]# iptables -t mangle  -L
+]# iptables -t raw     -L
+
+]# iptables -t filter  -nL --line-numbers
+]# iptables -t filter  -nL  INPUT --line-numbers
+]# iptables -t nat  -nL POSTROUTING --line-numbers
+
+]# iptables -t filter  -F
+]# iptables -t nat  -F
+]# iptables -t mangle  -F
+]# iptables -t raw  -F
+
+]# iptables-save  > /etc/sysconfig/iptables
+
++++++++++++++++++++++++++++++++++++++++++++++
+主机型防火墙 （自己保护自己）用的filter表 （INPUT OUTPUT FORWARD）
+
+
+iptables -t filter  -A  INPUT -p tcp -s 192.168.4.254 --dport 22 -j ACCEPT
+iptables -t filter  -P  INPUT  DROP
+
+
+iptables -t filter  -A  INPUT -p tcp --dport 80 -j ACCEPT
+
+iptables -t filter  -A  INPUT -p tcp --dport 80 -s 192.168.4.52 -j DROP
+iptables -t filter  -nL INPUT
+iptables -t filter  -D  INPUT  3
+iptables -t filter  -I  INPUT 2 -p tcp --dport 80 -s 192.168.4.52 -j DROP
+
+iptables -t filter  -A INPUT -p icmp -j ACCEPT
+
+iptables -t filter  -I INPUT 4 -p icmp -s 192.168.4.52 -j REJECT
+iptables -t filter  -I INPUT 5 -p icmp -s 192.168.4.54 -j DROP
+
+iptables -t filter  -nL INPUT
+
+
+允许50ping 其他主机 但其他主机 ping 不通50主机
+iptables -t filter  -D INPUT 6
+iptables -t filter  -D INPUT 5
+iptables -t filter  -D INPUT 4
+iptables -t filter  -A INPUT -p icmp --icmp-type echo-reply -j ACCEPT
+
+
+
+
+
+iptables -t filter -P OUTPUT DROP
+iptables -A OUTPUT -p icmp   --icmp-type echo-request  -j ACCEPT
+
+
+
+++++++++++++++++++++++++++++++++++++++++++++++ 15：25 上课
+网关主机 52 的配置
+    [root@host52 ~]# sysctl -a  列出内核参数值
+    [root@host52 ~]# vim /etc/sysctl.conf   定义查看显示值
+           net.ipv4.ip_forward = 1
+    :wq
+    [root@host52 ~]# sysctl -p  查看
+    net.ipv4.ip_forward = 1
+    ]# ifconfig eth0
+    ]# ifconfig eth1
+                                                         15：25 上课 
+给内网主机51配置网关
+	      ]# ifconfig  eth0 
+   [root@R51 ~]# systemctl  stop NetworkManager
+   [root@R51 ~]# route add default gw 192.168.4.52
+   [root@R51 ~]# route -n
+   [root@R51 ~]# route del default gw 192.168.4.52 删除网关
+
+给外网主机53配置网关
+           ]# ifconfig eth1 
+[root@R53 ~]# systemctl  stop NetworkManager
+[root@R53 ~]# route add default gw 192.168.2.52
+[root@R53 ~]# route -n
+
+验证配置: 51 主机 和 53 主机可以互相ping 通 
+
+
+配置网络型防火墙(网关主机52 运行防火墙服务)
+        [root@host52 ~]# systemctl  stop firewalld
+        [root@host52 ~]# systemctl  disable firewalld
+
+        [root@host52 ~]# yum -y  install iptables-services
+        [root@host52 ~]# systemctl start  iptables
+        [root@host52 ~]# systemctl enable  iptables
+
+        [root@host52 ~]# iptables -t filter  -F
+        [root@host52 ~]# iptables -t nat  -F
+        [root@host52 ~]# iptables -t mangle  -F
+        [root@host52 ~]# iptables -t raw  -F
+        [root@host52 ~]# iptables-save >  /etc/sysconfig/iptables
+        [root@host52 ~]# systemctl restart  iptables
+        [root@host52 ~]# iptables -t filter -nL
+
+在公网主机53 配置网站服务httpd
+        [root@host53 ~]# yum  -y  install  httpd^C
+        [root@host53 ~]# echo  123  > /var/www/html/test.html
+        [root@host53 ~]# systemctl  start httpd
+
+清除53主机密钥对认证登陆
+   ]# vim /etc/ssh/sshd_config
+     65 PasswordAuthentication yes
+   :wq
+   ]# rm -rf ~/.ssh
+   ]# systemctl restart 
+
+在内网主机51 访问公网的网站服务 curl  http://192.168.2.53/test.html
+在内网主机51 访问公网的ssh服务  ssh  192.168.2.53
+在内网主机51 ping 53主机        ping -c  1   192.168.2.53
+练习 10 分钟 到  15：00 
+休息 10 分钟 到  16：15
+
+在网关主机上编写防火墙规则
+[root@host52 ~]# iptables -t filter -P FORWARD DROP
+
+[root@host52 ~]# iptables -t filter -A FORWARD -p tcp --dport 80 -j ACCEPT
+[root@host52 ~]# iptables -t filter -A FORWARD -p tcp --sport 80 -j ACCEPT
+
+[root@host52 ~]# iptables -t filter  -A FORWARD -p tcp  --dport 22  -j ACCEPT
+[root@host52 ~]# iptables -t filter  -A FORWARD -p tcp  --sport 22  -j ACCEPT
+
+[root@host52 ~]# iptables -t filter  -A FORWARD -p icmp -j ACCEPT
+
+练习 到 16：45 
+
+扩展匹配  休息到  17：20   练习到 17：30  
+
+[root@host52 ~]# iptables -t filter  -D FORWARD 1
+[root@host52 ~]# iptables -t filter  -D FORWARD 1
+[root@host52 ~]# iptables -t filter  -D FORWARD 1
+[root@host52 ~]# iptables -t filter  -D FORWARD 1
+
+]# iptables -t filter  -nL FORWARD --line-numbers 
+]# iptables -t filter  -A FORWARD -p tcp -m multiport --dports 22,80,3306  -j ACCEPT
+]# iptables -t filter  -A FORWARD -p tcp -m multiport --sports 22,80,3306  -j ACCEPT
+
+
+]# iptables -t filter -I FORWARD -p icmp -m iprange 
+--src-range 192.168.4.10-192.168.4.100 -j DROP
+
+]# arp -a  获取 ping过本机的ip地址对应的mac地址
+
+]# iptables -t filter -I FORWARD -p icmp -m mac  --mac-source 74:52:09:07:51:01 -j DROP
+
+]# iptables-save  > /etc/sysconfig/iptables
+
+]# cat /etc/sysconfig/iptables
+
+nat 表的使用
+	配置公网 网站服务器 53
+	[root@host53 ~]# route del default gw  192.168.2.52
+	[root@host53 ~]# route -n
+	[root@host53 ~]# netstat -utnlp  | grep  :80
+
+	配置网关主机
+	[root@host52 ~]# iptables -t filter  -F
+	[root@host52 ~]# iptables -t filter  -nL
+	[root@host52 ~]# iptables -t filter  -P FORWARD ACCEPT
+	[root@host52 ~]# iptables-save  > /etc/sysconfig/iptables
+        [root@host52 ~]# ifconfig  eth0 连接内网
+        [root@host52 ~]# ifconfig  eth1 连接公网
+
+	配置内网主机 
+	[root@R51 ~]# ifconfig  eth0
+	[root@R51 ~]# route -n
+       
+        51访问公网53的网站服务 (结果是无法连接)
+	[root@R51 ~]# curl http://192.168.2.53/test.html
+
+在防火墙主机52 编写防火墙规则实现所有内网主机共享一个ip的访问互联网
+]# iptables  -t nat  -A POSTROUTING -s 192.168.4.0/24 -p tcp --dport 80 -j SNAT --to-source 192.168.2.52
+
+]# iptables-save  > /etc/sysconfig/iptables
+
+
+51访问公网53的网站服务 (可以连接)
+	[root@R51 ~]# curl http://192.168.2.53/test.html
+
+++++++++++++++++++++++++++++++++++++++++++++++++++
+day05 部署zabbix监控服务器（192.168.2.5）
+
+安装源码nginx
+	tar -zxvf zabbix.tar.gz 
+	cd Zabbix/
+	yum -y install gcc pcre-devel openssl-devel
+	tar -zxvf nginx-1.12.2.tar.gz 
+	cd nginx-1.12.2/
+	./configure  --prefix=/usr/local/nginx --with-http_ssl_module
+	make
+	make install
+	ls  /usr/local/nginx/
+
+到10：10  安装完的休息 10分钟到 10：20
+
+安装系统自带的php 和 mariadb
+   35  yum -y  install  php-fpm-5.4.16-42.el7.x86_64.rpm 
+   36  yum -y  install mariadb-server mariadb  mariadb-devel
+   37  yum -y install php php-mysql
+
+启动 mariadb 和 php-fpm 服务
+   39  systemctl  start mariadb
+   40  systemctl  start php-fpm
+   41  netstat  -utnlp  | grep  :3306
+   42  netstat  -utnlp  | grep  :9000
+
+修改nginx服务主配置文件                                    到 10：48
+     44  vim  /usr/local/nginx/conf/nginx.conf
+     17 http {
+     18         fastcgi_buffers 8 16k;       
+     19         fastcgi_buffer_size 32k;      
+     20         fastcgi_connect_timeout 300; 
+     21         fastcgi_send_timeout 300;    
+     22         fastcgi_read_timeout 300;
+
+     65         location ~ \.php$ {
+     66             root           html;
+     67             fastcgi_pass   127.0.0.1:9000;
+     68             fastcgi_index  index.php;
+     69         #    fastcgi_param  SCRIPT_FILENAME  /scripts$fastcgi_script_name    ;
+     70             include        fastcgi.conf;
+     71         }
+          :wq
+启动nginx服务
+   45   /usr/local/nginx/sbin/nginx  -t
+   46   /usr/local/nginx/sbin/nginx
+   47  netstat -utnlp  | grep  :80
+编写php脚本文件 并访问
+   49  vim /usr/local/nginx/html/test.php
+        <?php
+          $i=33;
+          echo $i;
+       ?>
+
+   50  curl  http://localhost/test.php
+       33
+
+编译安装Zabbix   (10分钟)
+   57  yum -y install  libevent-devel-2.0.21-4.el7.x86_64.rpm
+   58  yum -y install  net-snmp-devel curl-devel
+   59  ls /usr/bin/mysql_config
+   60  tar -zxvf zabbix-3.4.4.tar.gz 
+   62  cd zabbix-3.4.4/
+   64  ./configure  --help
+   65  ./configure  --prefix=/usr/local/zabbix --enable-server --enable-proxy --enable-agent --with-mysql=/usr/bin/mysql_config --with-net-snmp --with-libcurl
+   66  make install
+   67  ls /usr/local/
+   68  ls /usr/local/zabbix/
+
+10分钟 到 11：10    休息10分钟到 11：x
+
+三、初始化Zabbix
+
+3.1 创建数据库与数据库账户 创建数据数据的表 (10分钟到 11：39)
+       ]# mysql
+       create database zabbix character set utf8;
+       grant all on zabbix.* to zabbix@'localhost' identified by 'zabbix';
+
+       ]# cd zabbix-3.4.4/database/mysql
+       ]# mysql -hlocalhost -uzabbix -pzabbix zabbix < schema.sql 
+       ]# mysql -hlocalhost -uzabbix -pzabbix zabbix < images.sql 
+       ]# mysql -hlocalhost -uzabbix -pzabbix zabbix < data.sql 
+
+3.2 上线Zabbix页面(创建网页文件)
+	cd  zabbix-3.4.4/frontends
+	cp -r  php  /usr/local/nginx/html/zabbix
+	ls /usr/local/nginx/html/
+
+3.3 修改系统环境
+	]# vim  /etc/php.ini
+	672 post_max_size = 16M
+	384 max_execution_time = 300
+	394 max_input_time = 300
+	878 date.timezone = Asia/ShangHai
+	:wq
+	107  yum -y install  php-bcmath-5.4.16-42.el7.x86_64.rpm
+  	109  yum -y install  php-mbstring-5.4.16-42.el7.x86_64.rpm
+  	110  yum -y  install php-gd  php-xml  php-ldap
+  	111  systemctl  restart php-fpm
+3.4 访问网页页面 做初始化配置
+	http://192.168.2.5/zabbix/index.php
+	]# chmod o+w  /usr/local/nginx/html/zabbix/conf/
+	]# cat /usr/local/nginx/html/zabbix/conf/zabbix.conf.php
+
+3.5 登陆管理页面
+	用户名 admin
+	密  码 zabbix
+
+四、启动zabbix server服务 （ 10分钟到 14：45 ）
+4.1、 修改配置文件
+	]# vim /usr/local/zabbix/etc/zabbix_server.conf
+		38 LogFile=/tmp/zabbix_server.log
+		85 # DBHost=localhost
+		95 DBName=zabbix
+		111 DBUser=zabbix
+		119 DBPassword=zabbix
+
+	:wq
+
+4.2、 创建启动脚本 启动服务
+	]# useradd  zabbix
+	]# cd  zabbix-3.4.4/misc/init.d/fedora/core
+	]# cp zabbix_server  /etc/init.d/
+	]# chmod +x  /etc/init.d/zabbix_server
+]# sed -i '22s;/usr/local;/usr/local/zabbix;' /etc/init.d/zabbix_server
+	]# /etc/init.d/zabbix_server start|stop|status
+	]# ls /tmp/zabbix_server.log
+	]# netstat -utnlp | grep :10051
+
+休息到  15：05
+
+五、zabbix监控软件的基本使用
+5.1 修改管理员admin的登陆密码
+5.2 查看已经监控的主机
+5.3 查看已经的监控模板
+5.4 查看监控信息
+
++++++++++++++++++++++++++++++++
+六、监控远端主机  192.168.2.100
+6.1 客户端配置 192.168.2.100
+安装zabbix软件
+    	7  yum  -y install gcc  pcre-devel
+    	8  useradd -s /sbin/nologin  zabbix
+    	9  tar  -zxvf zabbix-3.4.4.tar.gz 
+   	10  cd zabbix-3.4.4/
+   	11  ./configure  --prefix=/usr/local/zabbix --enable-agent
+   	12  make install
+   	13  ls /usr/local/zabbix/
+
+修改配置文件 (5分钟 到 16：30)
+	]# vim /usr/local/zabbix/etc/zabbix_agentd.conf
+		30 LogFile=/tmp/zabbix_agentd.log
+		93 Server=127.0.0.1,192.168.2.5
+		134 ServerActive=192.168.2.5:10051
+	:wq
+创建启动脚本(5分钟 到 16：36)	
+   19  cp misc/init.d/fedora/core/zabbix_agentd /etc/init.d/
+   20  chmod  +x  /etc/init.d/zabbix_agentd 
+   21  sed -i  '22s;/usr/local;/usr/local/zabbix;' /etc/init.d/zabbix_agentd
+   22  sed -n  '22p' /etc/init.d/zabbix_agentd
+运行zabbix_agentd服务
+	]# grep  zabbix  /etc/passwd
+	24  /etc/init.d/zabbix_agentd start
+   	25  netstat -utnlp  | grep  :10050
+   	26  ls /tmp/zabbix_agentd.log 
+
+6.2 监控服务器配置 192.168.2.5
+使用管理员admin登陆管理页面做如下操作：
+添加监控主机--> 选择监控模板--->查看监控信息
+
+
+
+七、自定义监控（在客户端定义监控命令，让监控服务器调用）
+7.1 客户端（192.168.2.100）
+
+启用自动定义监控项
+	]# vim /usr/local/zabbix/etc/zabbix_agentd.conf
+		 265 Include=/usr/local/zabbix/etc/zabbix_agentd.conf.d/*.conf
+	 	 280 UnsafeUserParameters=1
+       :wq
+定义监控命令
+	]# vim  /usr/local/zabbix/etc/zabbix_agentd.conf.d/sumusers.conf
+	 	UserParameter=get_sum_users,wc -l /etc/passwd | awk '{print $1}'
+        :wq
+重启zabbix_agentd服务
+	43  /etc/init.d/zabbix_agentd stop
+   	44  /etc/init.d/zabbix_agentd start
+测试定义监控命令
+   53  useradd yaya200
+   54  /usr/local/zabbix/bin/zabbix_get -s 127.0.0.1 -p 10050 -k  get_sum_users
+
+休息到 17：35  
+
+7.2 监控服务器（192.168.2.5）
+测试客户端定义监控命令
+   ]# /usr/local/zabbix/bin/zabbix_get -s 192.168.2.100 -p 10050  -k get_sum_users
+
+
+创建新监控模板--->创建应用集--->创建监控项--->指定监控命令--->调用新创建的监控模板--->查看监控信息
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

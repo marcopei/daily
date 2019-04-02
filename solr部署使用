@@ -55,3 +55,18 @@ solr清除数据步骤：
 命令方式：./bin/solr  create  -c  sure-core    （需要重启solr服务才行）
 
 手动创建：可以参照网址https://www.cnblogs.com/zjm-1/p/9172799.html
+
+
+
+solr字段的添加，目录文件：
+正式]# vim /data/soft/solr/server/solr/sure-core/conf/managed-schema
+
+外测]# vim /data/nsoft/solr-5.5.5/server/solr/sure-core/conf/managed-schema  
+
+内测]# vim /data/soft/solr-5.5/server/solr/sure-core/conf/managed-schema
+
+
+solr重启：
+正式]# /data/soft/solr/bin/solr  restart
+外测]# /data/nsoft/solr-5.5.5/bin/solr   restart
+内测]# /data/soft/solr-5.5/bin/solr  restart

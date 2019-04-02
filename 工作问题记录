@@ -100,3 +100,32 @@ slave_type_conversions参数就好。需先停止stop  slave后设置再开启sl
 同样报错1677，这时我就觉得应该不是这个参数的原因。后来我想想，因为当时数据库master一直还在运行的，并且在修改master上的部分表格时，slave库已经
 断开了主从连接，没有同步到master上的操作；所以为了验证我的个人想法，我马上备份mysqldump  master上的数据，然后在slave上进行恢复，完成后再change
  master，最后我再查看slave的状态，发现已经不报错了，并且主从也稳定的运行。
+ 
+ 
+ 
+2019-03-31  mysql数据库主从同步报错：
+Last_Errno: 1594
+Last_SQL_Error: Relay log read failure: Could not parse relay log event entry. The possible reasons are: the master's binary log is corrupted
+ (you can check this by running 'mysqlbinlog' on the binary log), the slave's relay log is corrupted (you can check this by running 'mysqlbinlog'
+ on the relay log),a network problem, or a bug in the master's or slave's MySQL code. If you want to check the master's binary log or slave's relay 
+ log, you will be able to know their names by issuing 'SHOW SLAVE STATUS' on this slave.
+ 产生问题的原因：
+ 报错信息为从库“无法读取relay log 里的条目”，可能原因为master库的binglog错误，或slave库的中继日志错误。或者为网络问题及bug原因。
+ 一般是由于网络故障或slave库压力过大，导致relay-log格式错误造成的。找到当前已经同步的时间点，重新设置主从同步，就会产生新的中继日志，恢复正常。
+解决办法：
+1.查看以下两项数据：
+Relay_Master_Log_File: mysql-bin.000019     //slave库已读取的master的binlog
+Exec_Master_Log_Pos: 7838079           //在slave上已经执行的position位置点
+2.然后执行：
+mysql> stop  slave;
+mysql> change  master  to  master_log_file="mysql-bin.000019",master_log_pos=7838079;
+mysql> start   slave;
+
+Last_Errno: 1062
+Last_Error: Could not execute Write_rows event on table surelive.LG_OnlineQty; Duplicate entry '23378' for key 'PRIMARY', Error_code: 1062; handler 
+error HA_ERR_FOUND_DUPP_KEY; the event's master log mysql-bin.000019, end_log_pos 7838347
+问题原因：主键产生冲突了
+解决办法：
+mysql> stop  slave;
+mysql> set  global  sql_slave_skip_counter=1;
+mysql> start   slave;

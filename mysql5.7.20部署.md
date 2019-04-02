@@ -50,6 +50,7 @@ open_files_limit = 65535
 max_connections = 100
 max_connect_errors = 100000
 
+secure-file-priv="/tmp/"   ##增加数据导入速度，需放在此目录下
 [mysqld_safe]
 log-error=error.log
 pid-file=mysql.pid
@@ -160,3 +161,14 @@ log-error=/usr/local/mysql/logs/3306_err.log #启动错误日志输出地址
 
 优化思路：
 线程排队，最大连接数
+
+
+mysql数据导出成其他格式: select 需要导出的数据1，需要导出的数据2， from 数据库表 where  导出过滤条件 into outfile '要导出文件名以及格式'
+方法一]# select  *   from   LG_ClientData  into   outfile  '/data/bacukup/2019-3-26.xls'; （需要登录的mysql用户拥有写权限）
+方法二]#echo "select * from  表格  where   条件" | mysql -h127.0.0.1 -uroot -padmin > /data/名字.xls
+
+数据导入：
+方法一：
+mysql> load data  low_priority  infile  "/tmp/ST_HourTotal.txt"   into  table  ST_HourTotal;  ##登录到先对应的数据库
+方法二：
+]# mysql  -uroot -p12345 -h127.0.0.1 -P14036   surelive   <  备份数据名
